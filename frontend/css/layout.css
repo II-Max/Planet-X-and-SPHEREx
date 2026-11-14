@@ -1,0 +1,78 @@
+/* frontend/css/layout.css - Grid System & Workspace Containers */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  background-color: var(--bg-deep);
+  color: var(--text-main);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  line-height: 1.4;
+  user-select: none;
+}
+
+#app {
+  display: grid;
+  grid-template-rows: 52px 1fr 230px;
+  grid-template-columns: 1fr 400px;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* Header */
+.app-header {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  background: linear-gradient(180deg, rgba(16, 25, 48, 0.98), rgba(10, 15, 30, 0.95));
+  border-bottom: 1px solid var(--border-subtle);
+  z-index: 50;
+}
+
+/* Central Sky Viewport */
+.viewport-container {
+  position: relative;
+  background-color: #020408;
+  overflow: hidden;
+  border-right: 1px solid var(--border-subtle);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+#skyCanvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  cursor: crosshair;
+}
+
+/* Right Inspector Panel */
+.right-inspector {
+  grid-column: 2;
+  grid-row: 2;
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--border-subtle);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Bottom Spectral Dock */
+.spectral-explorer-dock {
+  grid-column: 1 / -1;
+  grid-row: 3;
+  background: var(--bg-surface);
+  border-top: 1px solid var(--border-subtle);
+  display: grid;
+  grid-template-columns: 320px 1fr 280px;
+  padding: 10px 16px;
+  gap: 16px;
+  z-index: 30;
+}
+

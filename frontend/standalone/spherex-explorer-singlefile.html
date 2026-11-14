@@ -1,0 +1,1292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SPHEREx Sky-Shift Explorer</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#060612;--panel:rgba(8,12,28,0.92);--border:rgba(80,160,255,0.12);
+  --accent:#00d4ff;--accent2:#7b5cff;--warm:#ff6b35;--cyan:#00e5ff;
+  --red:#ff4060;--green:#00ff88;--yellow:#ffcc00;--text:#b8c8dc;
+  --bright:#e8f0ff;--dim:#4a5568;--glow:0 0 20px rgba(0,212,255,0.3);
+  --radius:8px;--mono:'JetBrains Mono',monospace;--sans:'Inter',system-ui,sans-serif;
+}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:var(--sans)}
+#app{display:grid;grid-template-rows:48px 1fr 54px;height:100vh;width:100vw}
+
+/* ── Header ── */
+.header{display:flex;align-items:center;gap:12px;padding:0 16px;background:linear-gradient(90deg,rgba(0,40,80,0.6),rgba(20,10,50,0.6));border-bottom:1px solid var(--border);z-index:10}
+.header .logo{font-size:11px;font-weight:700;letter-spacing:3px;color:var(--accent);font-family:var(--mono);text-transform:uppercase}
+.header .logo span{color:var(--warm)}
+.header .title{font-size:15px;font-weight:600;color:var(--bright)}
+.header .subtitle{font-size:11px;color:var(--dim);margin-left:auto;font-family:var(--mono)}
+.sector-tabs{display:flex;gap:2px;margin-left:24px}
+.sector-tab{padding:6px 14px;font-size:11px;font-family:var(--mono);background:rgba(255,255,255,0.04);border:1px solid transparent;border-radius:4px;color:var(--dim);cursor:pointer;transition:all .2s}
+.sector-tab:hover{color:var(--text);border-color:var(--border)}
+.sector-tab.active{background:rgba(0,212,255,0.1);border-color:var(--accent);color:var(--accent);box-shadow:var(--glow)}
+
+/* ── Main Area ── */
+.main{display:grid;grid-template-columns:1fr 380px;gap:0;overflow:hidden}
+
+/* ── Canvas Panel ── */
+.canvas-panel{position:relative;background:#030308;overflow:hidden;border-right:1px solid var(--border)}
+#skyCanvas{display:block;width:100%;height:100%;cursor:crosshair}
+.canvas-hud{position:absolute;top:10px;left:10px;display:flex;gap:6px;z-index:5}
+.hud-badge{padding:4px 10px;font-size:10px;font-family:var(--mono);background:rgba(0,0,0,0.7);border:1px solid var(--border);border-radius:4px;color:var(--text);pointer-events:none}
+.hud-badge .val{color:var(--accent)}
+.canvas-crosshair{position:absolute;pointer-events:none;z-index:4}
+.mode-overlay-label{position:absolute;top:10px;right:10px;padding:6px 14px;font-size:11px;font-weight:600;font-family:var(--mono);border-radius:4px;z-index:5;letter-spacing:1px}
+.mode-overlay-label.blink{background:rgba(0,212,255,0.15);border:1px solid var(--accent);color:var(--accent)}
+.mode-overlay-label.overlay{background:rgba(255,64,96,0.15);border:1px solid var(--red);color:var(--red)}
+.mode-overlay-label.diff{background:rgba(0,255,136,0.15);border:1px solid var(--green);color:var(--green)}
+.mode-overlay-label.wipe{background:rgba(123,92,255,0.15);border:1px solid var(--accent2);color:var(--accent2)}
+.wipe-line{position:absolute;top:0;width:2px;height:100%;background:var(--accent2);box-shadow:0 0 10px var(--accent2);z-index:6;pointer-events:none}
+.wipe-handle{position:absolute;top:50%;width:24px;height:40px;margin-top:-20px;margin-left:-11px;background:var(--accent2);border-radius:6px;z-index:7;cursor:ew-resize;display:flex;align-items:center;justify-content:center}
+.wipe-handle::after{content:'⋮';color:white;font-size:16px}
+.epoch-indicator{position:absolute;bottom:10px;left:50%;transform:translateX(-50%);display:flex;gap:8px;z-index:5}
+.epoch-dot{width:10px;height:10px;border-radius:50%;border:2px solid var(--dim);background:transparent;transition:all .2s}
+.epoch-dot.active{border-color:var(--accent);background:var(--accent);box-shadow:0 0 8px var(--accent)}
+
+/* ── Right Panel ── */
+.right-panel{display:flex;flex-direction:column;background:var(--panel);overflow-y:auto}
+.panel-section{padding:14px 16px;border-bottom:1px solid var(--border)}
+.panel-section:last-child{border-bottom:none}
+.section-title{font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--dim);margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.section-title .dot{width:6px;height:6px;border-radius:50%;background:var(--accent)}
+
+/* ── Mode Selector ── */
+.mode-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.mode-btn{padding:10px 8px;font-size:11px;font-family:var(--mono);text-align:center;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);cursor:pointer;transition:all .25s;line-height:1.3}
+.mode-btn:hover{background:rgba(255,255,255,0.06);border-color:rgba(0,212,255,0.3)}
+.mode-btn.active{background:rgba(0,212,255,0.08);border-color:var(--accent);color:var(--accent);box-shadow:var(--glow)}
+.mode-btn .mode-key{display:block;font-size:18px;margin-bottom:4px}
+.mode-btn .mode-label{display:block;font-size:9px;color:var(--dim)}
+.mode-btn.active .mode-label{color:var(--accent)}
+
+/* ── Band & Speed Controls ── */
+.slider-group{margin-bottom:10px}
+.slider-group label{display:flex;justify-content:space-between;font-size:10px;font-family:var(--mono);color:var(--dim);margin-bottom:6px}
+.slider-group label span{color:var(--accent)}
+input[type=range]{-webkit-appearance:none;width:100%;height:4px;background:rgba(255,255,255,0.08);border-radius:2px;outline:none}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:var(--accent);cursor:pointer;box-shadow:0 0 6px var(--accent)}
+.filter-btns{display:flex;flex-wrap:wrap;gap:4px}
+.filter-btn{padding:4px 8px;font-size:9px;font-family:var(--mono);background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:3px;color:var(--dim);cursor:pointer;transition:all .2s}
+.filter-btn:hover{color:var(--text);border-color:rgba(0,212,255,0.3)}
+.filter-btn.active{background:rgba(0,212,255,0.1);border-color:var(--accent);color:var(--accent)}
+
+/* ── Spectral Chart ── */
+.chart-wrap{position:relative;background:rgba(0,0,0,0.3);border:1px solid var(--border);border-radius:var(--radius);padding:8px;margin-top:8px}
+#spectralCanvas{width:100%;height:180px;display:block}
+.chart-legend{display:flex;gap:10px;margin-top:6px;font-size:9px;font-family:var(--mono)}
+.chart-legend .leg{display:flex;align-items:center;gap:4px}
+.chart-legend .leg .swatch{width:8px;height:3px;border-radius:1px}
+.no-selection{text-align:center;padding:30px 10px;color:var(--dim);font-size:11px;font-style:italic}
+
+/* ── Object Info ── */
+.obj-info{background:rgba(0,212,255,0.04);border:1px solid rgba(0,212,255,0.15);border-radius:var(--radius);padding:10px;margin-bottom:10px}
+.obj-info .obj-name{font-size:13px;font-weight:600;color:var(--bright);margin-bottom:6px}
+.obj-info .obj-type{font-size:10px;font-family:var(--mono);padding:2px 8px;border-radius:3px;display:inline-block;margin-bottom:8px}
+.obj-info .obj-type.asteroid{background:rgba(255,107,53,0.15);color:var(--warm)}
+.obj-info .obj-type.browndwarf{background:rgba(255,64,96,0.15);color:var(--red)}
+.obj-info .obj-type.comet{background:rgba(0,212,255,0.15);color:var(--cyan)}
+.obj-stats{display:grid;grid-template-columns:1fr 1fr;gap:4px 12px}
+.obj-stat{font-size:10px;font-family:var(--mono)}
+.obj-stat .stat-label{color:var(--dim)}
+.obj-stat .stat-val{color:var(--bright);float:right}
+
+/* ── Classification ── */
+.classify-btns{display:flex;gap:6px;margin-bottom:10px}
+.classify-btn{flex:1;padding:8px 4px;font-size:10px;font-family:var(--mono);text-align:center;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);cursor:pointer;transition:all .2s}
+.classify-btn:hover{background:rgba(255,255,255,0.06)}
+.classify-btn.selected{border-width:2px}
+.classify-btn.selected.c-asteroid{border-color:var(--warm);color:var(--warm);background:rgba(255,107,53,0.1)}
+.classify-btn.selected.c-browndwarf{border-color:var(--red);color:var(--red);background:rgba(255,64,96,0.1)}
+.classify-btn.selected.c-comet{border-color:var(--cyan);color:var(--cyan);background:rgba(0,229,255,0.1)}
+.classify-btn.selected.c-artifact{border-color:var(--dim);color:var(--text);background:rgba(255,255,255,0.05)}
+.classify-btn .cls-icon{font-size:16px;display:block;margin-bottom:2px}
+.consensus-panel{background:rgba(0,0,0,0.3);border:1px solid var(--border);border-radius:var(--radius);padding:10px}
+.consensus-row{display:flex;justify-content:space-between;align-items:center;font-size:10px;font-family:var(--mono);margin-bottom:6px}
+.consensus-row:last-child{margin-bottom:0}
+.consensus-row .cr-label{color:var(--dim)}
+.consensus-row .cr-val{color:var(--bright)}
+.confidence-bar{height:6px;background:rgba(255,255,255,0.06);border-radius:3px;overflow:hidden;margin-top:4px}
+.confidence-fill{height:100%;border-radius:3px;transition:width .5s ease}
+.submit-btn{width:100%;padding:10px;margin-top:10px;font-size:12px;font-weight:600;font-family:var(--mono);background:linear-gradient(135deg,rgba(0,212,255,0.2),rgba(123,92,255,0.2));border:1px solid var(--accent);border-radius:var(--radius);color:var(--accent);cursor:pointer;transition:all .25s;letter-spacing:1px}
+.submit-btn:hover{background:linear-gradient(135deg,rgba(0,212,255,0.3),rgba(123,92,255,0.3));box-shadow:var(--glow)}
+.submit-btn:disabled{opacity:0.3;cursor:not-allowed}
+.toast{position:fixed;bottom:70px;left:50%;transform:translateX(-50%);padding:10px 24px;background:rgba(0,255,136,0.15);border:1px solid var(--green);border-radius:var(--radius);color:var(--green);font-size:12px;font-family:var(--mono);z-index:100;opacity:0;transition:opacity .3s;pointer-events:none}
+.toast.show{opacity:1}
+
+/* ── Footer ── */
+.footer{display:flex;align-items:center;gap:16px;padding:0 16px;background:linear-gradient(90deg,rgba(0,30,60,0.5),rgba(15,8,40,0.5));border-top:1px solid var(--border);z-index:10}
+.footer .foot-group{display:flex;align-items:center;gap:8px}
+.footer label{font-size:10px;font-family:var(--mono);color:var(--dim);white-space:nowrap}
+.footer label span{color:var(--accent)}
+.footer input[type=range]{width:120px}
+.footer .kbd{padding:2px 6px;font-size:9px;font-family:var(--mono);background:rgba(255,255,255,0.06);border:1px solid var(--border);border-radius:3px;color:var(--dim)}
+
+/* ── Animations ── */
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}}
+.blink-active .epoch-dot.active{animation:pulse .3s ease-in-out infinite}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.panel-section{animation:fadeIn .3s ease}
+.marker-ring{position:absolute;border:2px solid var(--green);border-radius:50%;pointer-events:none;z-index:5;animation:markerPulse 1.5s ease-in-out infinite}
+@keyframes markerPulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.3);opacity:0.5}}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="logo">NASA <span>SPHEREx</span></div>
+    <div class="title">Sky-Shift Explorer</div>
+    <div class="sector-tabs" id="sectorTabs"></div>
+    <div class="subtitle" id="coordDisplay">RA 00h00m00s Dec +00°00′00″</div>
+  </div>
+
+  <!-- Main -->
+  <div class="main">
+    <!-- Sky Canvas -->
+    <div class="canvas-panel" id="canvasPanel">
+      <canvas id="skyCanvas"></canvas>
+      <div class="canvas-hud" id="canvasHud">
+        <div class="hud-badge">Zoom <span class="val" id="hudZoom">1.0×</span></div>
+        <div class="hud-badge">Epoch <span class="val" id="hudEpoch">2025.0</span></div>
+        <div class="hud-badge">Band <span class="val" id="hudBand">λ=0.75μm</span></div>
+        <div class="hud-badge">Objects <span class="val" id="hudObjs">0</span></div>
+      </div>
+      <div class="mode-overlay-label blink" id="modeLabel">BLINK COMPARATOR</div>
+      <div class="epoch-indicator" id="epochDots"></div>
+      <div id="wipeContainer" style="display:none">
+        <div class="wipe-line" id="wipeLine"></div>
+        <div class="wipe-handle" id="wipeHandle"></div>
+      </div>
+      <div id="markerLayer"></div>
+    </div>
+
+    <!-- Right Panel -->
+    <div class="right-panel">
+      <!-- Mode Selector -->
+      <div class="panel-section">
+        <div class="section-title"><span class="dot"></span>Comparison Mode</div>
+        <div class="mode-grid" id="modeGrid">
+          <button class="mode-btn active" data-mode="blink"><span class="mode-key">A</span>Blink Comparator<span class="mode-label">Auto-cycle epochs</span></button>
+          <button class="mode-btn" data-mode="overlay"><span class="mode-key">B</span>Red/Cyan Overlay<span class="mode-label">Dipole detection</span></button>
+          <button class="mode-btn" data-mode="diff"><span class="mode-key">C</span>Difference Map<span class="mode-label">|Epoch₂ − Epoch₁|</span></button>
+          <button class="mode-btn" data-mode="wipe"><span class="mode-key">D</span>Split-Screen Wipe<span class="mode-label">Interactive divider</span></button>
+        </div>
+      </div>
+
+      <!-- Band Controls -->
+      <div class="panel-section">
+        <div class="section-title"><span class="dot"></span>Spectral Band Selector</div>
+        <div class="slider-group">
+          <label>Band <span id="bandNum">1</span> / 102 — <span id="bandWavelength">λ = 0.75 μm</span></label>
+          <input type="range" id="bandSlider" min="1" max="102" value="1">
+        </div>
+        <div class="filter-btns" id="filterBtns">
+          <button class="filter-btn active" data-band="0">All Bands</button>
+          <button class="filter-btn" data-band="60">CH₄ 3.3μm</button>
+          <button class="filter-btn" data-band="82">CO₂ 4.2μm</button>
+          <button class="filter-btn" data-band="90">Thermal 4.5μm</button>
+        </div>
+      </div>
+
+      <!-- Spectral Chart -->
+      <div class="panel-section">
+        <div class="section-title"><span class="dot"></span>102-Band Spectral Fingerprint</div>
+        <div id="chartArea">
+          <div class="no-selection" id="noSelection">Click any object on the canvas to inspect its spectrum</div>
+          <div id="objInfoWrap" style="display:none">
+            <div class="obj-info" id="objInfo"></div>
+          </div>
+          <div class="chart-wrap" style="display:none" id="chartWrap">
+            <canvas id="spectralCanvas"></canvas>
+            <div class="chart-legend">
+              <div class="leg"><span class="swatch" style="background:var(--accent)"></span>Epoch 1</div>
+              <div class="leg"><span class="swatch" style="background:var(--warm)"></span>Epoch 2</div>
+              <div class="leg"><span class="swatch" style="background:var(--green)"></span>Epoch 3</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Classification -->
+      <div class="panel-section">
+        <div class="section-title"><span class="dot"></span>Citizen Science Classification</div>
+        <div class="classify-btns" id="classifyBtns">
+          <button class="classify-btn" data-cls="asteroid"><span class="cls-icon">☄️</span>Asteroid</button>
+          <button class="classify-btn" data-cls="browndwarf"><span class="cls-icon">🟤</span>Brown Dwarf</button>
+          <button class="classify-btn" data-cls="comet"><span class="cls-icon">💫</span>Comet</button>
+          <button class="classify-btn" data-cls="artifact"><span class="cls-icon">❌</span>Artifact</button>
+        </div>
+        <div class="consensus-panel" id="consensusPanel">
+          <div class="consensus-row"><span class="cr-label">AI Confidence</span><span class="cr-val" id="aiConf">—</span></div>
+          <div class="confidence-bar"><div class="confidence-fill" id="aiConfBar" style="width:0%;background:var(--accent)"></div></div>
+          <div class="consensus-row" style="margin-top:8px"><span class="cr-label">Community Votes</span><span class="cr-val" id="commVotes">—</span></div>
+          <div class="consensus-row"><span class="cr-label">Consensus</span><span class="cr-val" id="consLabel">—</span></div>
+        </div>
+        <button class="submit-btn" id="submitBtn" disabled>SUBMIT CLASSIFICATION</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div class="footer">
+    <div class="foot-group">
+      <label>Blink Speed <span id="speedVal">2 Hz</span></label>
+      <input type="range" id="speedSlider" min="1" max="10" value="2">
+    </div>
+    <div class="foot-group">
+      <label>Epoch Pair</label>
+      <select id="epochPairSel" style="background:rgba(255,255,255,0.05);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:10px;font-family:var(--mono);padding:3px 6px">
+        <option value="0,1">E1 ↔ E2 (2025.0 – 2025.5)</option>
+        <option value="1,2">E2 ↔ E3 (2025.5 – 2026.0)</option>
+        <option value="0,2">E1 ↔ E3 (2025.0 – 2026.0)</option>
+      </select>
+    </div>
+    <div class="foot-group" style="margin-left:auto">
+      <span class="kbd">Space</span><label> toggle </label>
+      <span class="kbd">A-D</span><label> mode </label>
+      <span class="kbd">Scroll</span><label> zoom </label>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ═══════════════════════════════════════════════════════
+   SPHEREx Sky-Shift Explorer — Complete Application
+   ═══════════════════════════════════════════════════════ */
+
+// ── Seeded PRNG (Mulberry32) ───────────────────────────
+class Rand {
+  constructor(seed) { this.s = seed | 0; }
+  next() {
+    this.s |= 0; this.s = this.s + 0x6D2B79F5 | 0;
+    let t = Math.imul(this.s ^ (this.s >>> 15), 1 | this.s);
+    t = t + Math.imul(t ^ (t >>> 7), 61 | t) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  }
+  range(lo, hi) { return lo + this.next() * (hi - lo); }
+  gauss() {
+    const u1 = this.next() || 1e-10, u2 = this.next();
+    return Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
+  }
+}
+
+// ── Spectral Utilities ─────────────────────────────────
+const NUM_BANDS = 102;
+const LAMBDA_MIN = 0.75, LAMBDA_MAX = 5.0;
+function bandToWavelength(b) { return LAMBDA_MIN + (b / (NUM_BANDS - 1)) * (LAMBDA_MAX - LAMBDA_MIN); }
+function wavelengthToBand(w) { return Math.round(((w - LAMBDA_MIN) / (LAMBDA_MAX - LAMBDA_MIN)) * (NUM_BANDS - 1)); }
+
+function planck(lambda_um, T) {
+  const l = lambda_um * 1e-6;
+  const h = 6.626e-34, c = 3e8, k = 1.381e-23;
+  const x = h * c / (l * k * T);
+  if (x > 500) return 0;
+  return (2 * h * c * c / Math.pow(l, 5)) / (Math.exp(x) - 1);
+}
+
+function generateStarSpectrum(T) {
+  const spec = new Float32Array(NUM_BANDS);
+  let peak = 0;
+  for (let i = 0; i < NUM_BANDS; i++) {
+    spec[i] = planck(bandToWavelength(i), T);
+    if (spec[i] > peak) peak = spec[i];
+  }
+  if (peak > 0) for (let i = 0; i < NUM_BANDS; i++) spec[i] /= peak;
+  return spec;
+}
+
+function generateAsteroidSpectrum(rng) {
+  const reflected = generateStarSpectrum(5778);
+  const thermal = generateStarSpectrum(280 + rng.range(-40, 40));
+  const spec = new Float32Array(NUM_BANDS);
+  for (let i = 0; i < NUM_BANDS; i++) {
+    const w = bandToWavelength(i);
+    const thermalWeight = Math.max(0, (w - 3.0) / 2.0);
+    spec[i] = reflected[i] * 0.4 + thermal[i] * thermalWeight * 1.8;
+  }
+  let peak = 0;
+  for (let i = 0; i < NUM_BANDS; i++) if (spec[i] > peak) peak = spec[i];
+  if (peak > 0) for (let i = 0; i < NUM_BANDS; i++) spec[i] /= peak;
+  return spec;
+}
+
+function generateBrownDwarfSpectrum(rng) {
+  const base = generateStarSpectrum(1400 + rng.range(-200, 200));
+  const spec = new Float32Array(NUM_BANDS);
+  for (let i = 0; i < NUM_BANDS; i++) {
+    const w = bandToWavelength(i);
+    let absorption = 1.0;
+    const ch4Depth = 0.7 + rng.range(0, 0.2);
+    absorption *= 1.0 - ch4Depth * Math.exp(-0.5 * Math.pow((w - 3.3) / 0.15, 2));
+    const h2oDepth = 0.5 + rng.range(0, 0.15);
+    absorption *= 1.0 - h2oDepth * Math.exp(-0.5 * Math.pow((w - 2.7) / 0.2, 2));
+    absorption *= 1.0 - 0.3 * Math.exp(-0.5 * Math.pow((w - 1.4) / 0.1, 2));
+    absorption *= 1.0 - 0.25 * Math.exp(-0.5 * Math.pow((w - 1.9) / 0.12, 2));
+    spec[i] = base[i] * Math.max(0.05, absorption);
+  }
+  let peak = 0;
+  for (let i = 0; i < NUM_BANDS; i++) if (spec[i] > peak) peak = spec[i];
+  if (peak > 0) for (let i = 0; i < NUM_BANDS; i++) spec[i] /= peak;
+  return spec;
+}
+
+function generateCometSpectrum(rng) {
+  const dust = generateStarSpectrum(5778);
+  const thermal = generateStarSpectrum(220 + rng.range(-30, 30));
+  const spec = new Float32Array(NUM_BANDS);
+  for (let i = 0; i < NUM_BANDS; i++) {
+    const w = bandToWavelength(i);
+    spec[i] = dust[i] * 0.3 + thermal[i] * Math.max(0, (w - 2.5) / 2.5) * 1.2;
+    spec[i] += 0.8 * Math.exp(-0.5 * Math.pow((w - 4.26) / 0.08, 2));
+    spec[i] += 0.6 * Math.exp(-0.5 * Math.pow((w - 4.67) / 0.1, 2));
+    spec[i] += 0.3 * Math.exp(-0.5 * Math.pow((w - 3.0) / 0.12, 2));
+  }
+  let peak = 0;
+  for (let i = 0; i < NUM_BANDS; i++) if (spec[i] > peak) peak = spec[i];
+  if (peak > 0) for (let i = 0; i < NUM_BANDS; i++) spec[i] /= peak;
+  return spec;
+}
+
+// ── Color Helpers ──────────────────────────────────────
+function tempToRGB(T) {
+  const t = T / 100;
+  let r, g, b;
+  if (t <= 66) { r = 255; }
+  else { r = 329.698727446 * Math.pow(t - 60, -0.1332047592); }
+  if (t <= 66) { g = 99.4708025861 * Math.log(t) - 161.1195681661; }
+  else { g = 288.1221695283 * Math.pow(t - 60, -0.0755148492); }
+  if (t >= 66) { b = 255; }
+  else if (t <= 19) { b = 0; }
+  else { b = 138.5177312231 * Math.log(t - 10) - 305.0447927307; }
+  return [Math.max(0, Math.min(255, r)) | 0, Math.max(0, Math.min(255, g)) | 0, Math.max(0, Math.min(255, b)) | 0];
+}
+
+// ── Sky Sector Definitions ─────────────────────────────
+const SECTORS = [
+  { id: 0, name: "Cygnus Field", ra: "20h 36m 12s", dec: "+42° 16′", raNum: 309.05, decNum: 42.27, starCount: 520, seed: 42 },
+  { id: 1, name: "Boötes Void", ra: "14h 32m 00s", dec: "+46° 00′", raNum: 218.0, decNum: 46.0, starCount: 180, seed: 137 },
+  { id: 2, name: "Ophiuchus Cloud", ra: "16h 28m 00s", dec: "−24° 18′", raNum: 247.0, decNum: -24.3, starCount: 400, seed: 256 },
+  { id: 3, name: "Eridanus Deep", ra: "03h 20m 00s", dec: "−20° 00′", raNum: 50.0, decNum: -20.0, starCount: 140, seed: 773 },
+];
+
+// ── Moving Object Templates ────────────────────────────
+function createMovingObjects(rng, canvasW, canvasH) {
+  const cx = canvasW / 2, cy = canvasH / 2;
+  return [
+    {
+      id: "mobj_asteroid",
+      name: "2025 XR₇",
+      type: "asteroid",
+      label: "Main-Belt Asteroid",
+      baseX: cx - 120 + rng.range(-60, 60),
+      baseY: cy + 80 + rng.range(-40, 40),
+      dxPerEpoch: 28 + rng.range(-4, 4),
+      dyPerEpoch: -10 + rng.range(-3, 3),
+      mag: 0.45,
+      radius: 2.2,
+      temp: 280,
+      spectrum: generateAsteroidSpectrum(rng),
+      coma: false,
+      angularVelocity: 14.2,
+      aiConf: 0.94,
+      votes: { asteroid: 38, browndwarf: 1, comet: 4, artifact: 2 },
+    },
+    {
+      id: "mobj_browndwarf",
+      name: "WISE J1741−2456",
+      type: "browndwarf",
+      label: "T8 Brown Dwarf",
+      baseX: cx + 150 + rng.range(-50, 50),
+      baseY: cy - 100 + rng.range(-30, 30),
+      dxPerEpoch: 3.5 + rng.range(-0.5, 0.5),
+      dyPerEpoch: 5.2 + rng.range(-0.5, 0.5),
+      mag: 0.3,
+      radius: 2.0,
+      temp: 1400,
+      spectrum: generateBrownDwarfSpectrum(rng),
+      coma: false,
+      angularVelocity: 2.8,
+      aiConf: 0.87,
+      votes: { asteroid: 2, browndwarf: 41, comet: 0, artifact: 5 },
+    },
+    {
+      id: "mobj_comet",
+      name: "C/2025 S₁ (Chen-Mégier)",
+      type: "comet",
+      label: "Oort Cloud Comet",
+      baseX: cx - 200 + rng.range(-40, 40),
+      baseY: cy - 60 + rng.range(-40, 40),
+      dxPerEpoch: 16 + rng.range(-3, 3),
+      dyPerEpoch: 12 + rng.range(-3, 3),
+      mag: 0.38,
+      radius: 3.5,
+      temp: 220,
+      spectrum: generateCometSpectrum(rng),
+      coma: true,
+      angularVelocity: 8.5,
+      aiConf: 0.91,
+      votes: { asteroid: 3, browndwarf: 0, comet: 45, artifact: 1 },
+    },
+  ];
+}
+
+// ── Star Field Generator ───────────────────────────────
+function generateStars(sector, canvasW, canvasH) {
+  const rng = new Rand(sector.seed);
+  const stars = [];
+  for (let i = 0; i < sector.starCount; i++) {
+    const x = rng.range(10, canvasW - 10);
+    const y = rng.range(10, canvasH - 10);
+    const magRaw = rng.next();
+    const mag = Math.pow(magRaw, 3.5) * 0.9 + 0.02;
+    const temps = [3200, 4200, 5200, 5778, 6500, 8000, 10000, 15000, 25000];
+    const T = temps[(rng.next() * temps.length) | 0] + rng.range(-400, 400);
+    stars.push({
+      x, y, mag, temp: Math.max(2500, T),
+      rgb: tempToRGB(Math.max(2500, T)),
+      spectrum: generateStarSpectrum(Math.max(2500, T)),
+      radius: 0.5 + mag * 3.5,
+    });
+  }
+  for (let i = 0; i < 12; i++) {
+    const x = rng.range(30, canvasW - 30);
+    const y = rng.range(30, canvasH - 30);
+    stars.push({
+      x, y, mag: 0.06 + rng.next() * 0.08, temp: 5000,
+      rgb: [180, 160, 140], spectrum: generateStarSpectrum(5000),
+      radius: 6 + rng.next() * 10, isGalaxy: true,
+      ellip: 0.3 + rng.next() * 0.6, angle: rng.next() * Math.PI,
+    });
+  }
+  return stars;
+}
+
+/* ═══════════════════════════════════════════════════════
+   RENDERING ENGINE
+   ═══════════════════════════════════════════════════════ */
+class Renderer {
+  constructor(canvas) {
+    this.canvas = canvas;
+    this.ctx = canvas.getContext("2d", { willReadFrequently: true });
+    this.offscreens = [null, null, null];
+    this.resize();
+  }
+
+  resize() {
+    const panel = this.canvas.parentElement;
+    const dpr = window.devicePixelRatio || 1;
+    this.w = panel.clientWidth;
+    this.h = panel.clientHeight;
+    this.canvas.width = this.w * dpr;
+    this.canvas.height = this.h * dpr;
+    this.canvas.style.width = this.w + "px";
+    this.canvas.style.height = this.h + "px";
+    this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    for (let i = 0; i < 3; i++) {
+      const c = document.createElement("canvas");
+      c.width = this.w; c.height = this.h;
+      this.offscreens[i] = c;
+    }
+  }
+
+  renderEpoch(stars, movers, epochIdx, bandIdx, zoom, panX, panY, target) {
+    const ctx = target ? target.getContext("2d") : this.ctx;
+    const w = this.w, h = this.h;
+    ctx.save();
+    ctx.fillStyle = "#030308";
+    ctx.fillRect(0, 0, w, h);
+
+    ctx.translate(panX, panY);
+    ctx.scale(zoom, zoom);
+    ctx.translate(-w / 2, -h / 2);
+
+    const bandFluxIdx = bandIdx;
+
+    for (const star of stars) {
+      const flux = bandIdx === 0 ? star.mag : star.mag * (star.spectrum[bandFluxIdx - 1] || 0.01);
+      const r = star.radius * Math.max(0.3, flux / star.mag);
+      const alpha = Math.min(1, 0.3 + flux * 2);
+
+      if (star.isGalaxy) {
+        ctx.save();
+        ctx.translate(star.x, star.y);
+        ctx.rotate(star.angle);
+        ctx.scale(1, star.ellip);
+        const grd = ctx.createRadialGradient(0, 0, 0, 0, 0, star.radius);
+        grd.addColorStop(0, `rgba(${star.rgb[0]},${star.rgb[1]},${star.rgb[2]},${alpha * 0.6})`);
+        grd.addColorStop(0.4, `rgba(${star.rgb[0]},${star.rgb[1]},${star.rgb[2]},${alpha * 0.25})`);
+        grd.addColorStop(1, "transparent");
+        ctx.fillStyle = grd;
+        ctx.fillRect(-star.radius, -star.radius, star.radius * 2, star.radius * 2);
+        ctx.restore();
+        continue;
+      }
+
+      const [sr, sg, sb] = star.rgb;
+      if (r > 2.5) {
+        const grd = ctx.createRadialGradient(star.x, star.y, 0, star.x, star.y, r * 3);
+        grd.addColorStop(0, `rgba(255,255,255,${alpha})`);
+        grd.addColorStop(0.15, `rgba(${sr},${sg},${sb},${alpha * 0.8})`);
+        grd.addColorStop(0.5, `rgba(${sr},${sg},${sb},${alpha * 0.15})`);
+        grd.addColorStop(1, "transparent");
+        ctx.fillStyle = grd;
+        ctx.fillRect(star.x - r * 3, star.y - r * 3, r * 6, r * 6);
+      }
+      if (r > 4) {
+        ctx.strokeStyle = `rgba(${sr},${sg},${sb},${alpha * 0.3})`;
+        ctx.lineWidth = 0.5;
+        const sLen = r * 2.5;
+        ctx.beginPath();
+        ctx.moveTo(star.x - sLen, star.y); ctx.lineTo(star.x + sLen, star.y);
+        ctx.moveTo(star.x, star.y - sLen); ctx.lineTo(star.x, star.y + sLen);
+        ctx.stroke();
+      }
+      ctx.beginPath();
+      ctx.arc(star.x, star.y, Math.max(0.5, r * 0.4), 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(255,255,255,${alpha})`;
+      ctx.fill();
+    }
+
+    for (const obj of movers) {
+      const ox = obj.baseX + obj.dxPerEpoch * epochIdx;
+      const oy = obj.baseY + obj.dyPerEpoch * epochIdx;
+      const flux = bandIdx === 0 ? obj.mag : obj.mag * (obj.spectrum[bandFluxIdx - 1] || 0.01);
+      const r = obj.radius * Math.max(0.4, flux / obj.mag);
+      const alpha = Math.min(1, 0.4 + flux * 2.5);
+
+      let cr, cg, cb;
+      if (obj.type === "asteroid") { cr = 255; cg = 180; cb = 100; }
+      else if (obj.type === "browndwarf") { cr = 255; cg = 80; cb = 80; }
+      else { cr = 100; cg = 220; cb = 255; }
+
+      if (obj.coma) {
+        const comaR = r * 6;
+        const grd = ctx.createRadialGradient(ox - r, oy - r * 0.5, r * 0.5, ox - r * 2, oy - r, comaR);
+        grd.addColorStop(0, `rgba(${cr},${cg},${cb},${alpha * 0.3})`);
+        grd.addColorStop(0.3, `rgba(${cr},${cg},${cb},${alpha * 0.1})`);
+        grd.addColorStop(1, "transparent");
+        ctx.fillStyle = grd;
+        ctx.fillRect(ox - comaR * 1.5, oy - comaR, comaR * 2.5, comaR * 2);
+
+        ctx.save();
+        ctx.globalAlpha = alpha * 0.15;
+        ctx.strokeStyle = `rgba(${cr},${cg},${cb},0.5)`;
+        ctx.lineWidth = 0.8;
+        ctx.beginPath();
+        const tailLen = r * 12;
+        ctx.moveTo(ox, oy);
+        ctx.quadraticCurveTo(ox - tailLen * 0.5, oy - tailLen * 0.3, ox - tailLen, oy - tailLen * 0.6);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(ox, oy);
+        ctx.quadraticCurveTo(ox - tailLen * 0.4, oy - tailLen * 0.15, ox - tailLen * 0.9, oy - tailLen * 0.35);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      const grd = ctx.createRadialGradient(ox, oy, 0, ox, oy, r * 3);
+      grd.addColorStop(0, `rgba(255,255,255,${alpha})`);
+      grd.addColorStop(0.2, `rgba(${cr},${cg},${cb},${alpha * 0.9})`);
+      grd.addColorStop(0.6, `rgba(${cr},${cg},${cb},${alpha * 0.15})`);
+      grd.addColorStop(1, "transparent");
+      ctx.fillStyle = grd;
+      ctx.fillRect(ox - r * 3, oy - r * 3, r * 6, r * 6);
+
+      ctx.beginPath();
+      ctx.arc(ox, oy, Math.max(0.6, r * 0.5), 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(255,255,255,${alpha})`;
+      ctx.fill();
+    }
+
+    ctx.restore();
+  }
+
+  renderBlink(stars, movers, epochIdx, bandIdx, zoom, panX, panY) {
+    this.renderEpoch(stars, movers, epochIdx, bandIdx, zoom, panX, panY);
+  }
+
+  renderOverlay(stars, movers, eA, eB, bandIdx, zoom, panX, panY) {
+    const ocA = this.offscreens[0], ocB = this.offscreens[1];
+    this.renderEpoch(stars, movers, eA, bandIdx, zoom, panX, panY, ocA);
+    this.renderEpoch(stars, movers, eB, bandIdx, zoom, panX, panY, ocB);
+
+    const ctxA = ocA.getContext("2d"), ctxB = ocB.getContext("2d");
+    const dA = ctxA.getImageData(0, 0, this.w, this.h);
+    const dB = ctxB.getImageData(0, 0, this.w, this.h);
+    const out = this.ctx.createImageData(this.w, this.h);
+    const pA = dA.data, pB = dB.data, pO = out.data;
+
+    for (let i = 0; i < pA.length; i += 4) {
+      const lumA = pA[i] * 0.299 + pA[i + 1] * 0.587 + pA[i + 2] * 0.114;
+      const lumB = pB[i] * 0.299 + pB[i + 1] * 0.587 + pB[i + 2] * 0.114;
+      pO[i] = Math.min(255, lumA * 1.1) | 0;
+      pO[i + 1] = Math.min(255, lumB * 1.05) | 0;
+      pO[i + 2] = Math.min(255, lumB * 1.05) | 0;
+      pO[i + 3] = 255;
+    }
+    this.ctx.putImageData(out, 0, 0);
+  }
+
+  renderDiff(stars, movers, eA, eB, bandIdx, zoom, panX, panY) {
+    const ocA = this.offscreens[0], ocB = this.offscreens[1];
+    this.renderEpoch(stars, movers, eA, bandIdx, zoom, panX, panY, ocA);
+    this.renderEpoch(stars, movers, eB, bandIdx, zoom, panX, panY, ocB);
+
+    const ctxA = ocA.getContext("2d"), ctxB = ocB.getContext("2d");
+    const dA = ctxA.getImageData(0, 0, this.w, this.h);
+    const dB = ctxB.getImageData(0, 0, this.w, this.h);
+    const out = this.ctx.createImageData(this.w, this.h);
+    const pA = dA.data, pB = dB.data, pO = out.data;
+
+    for (let i = 0; i < pA.length; i += 4) {
+      const dr = Math.abs(pA[i] - pB[i]);
+      const dg = Math.abs(pA[i + 1] - pB[i + 1]);
+      const db = Math.abs(pA[i + 2] - pB[i + 2]);
+      const intensity = (dr + dg + db) / 3;
+      const boosted = Math.min(255, intensity * 4);
+      if (boosted > 15) {
+        pO[i] = Math.min(255, boosted * 0.2 + 20) | 0;
+        pO[i + 1] = Math.min(255, boosted * 1.1) | 0;
+        pO[i + 2] = Math.min(255, boosted * 0.5 + 10) | 0;
+      } else {
+        pO[i] = 3; pO[i + 1] = 3; pO[i + 2] = 8;
+      }
+      pO[i + 3] = 255;
+    }
+    this.ctx.putImageData(out, 0, 0);
+  }
+
+  renderWipe(stars, movers, eA, eB, bandIdx, zoom, panX, panY, wipeX) {
+    const ctx = this.ctx;
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(0, 0, wipeX, this.h);
+    ctx.clip();
+    this.renderEpoch(stars, movers, eA, bandIdx, zoom, panX, panY);
+    ctx.restore();
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(wipeX, 0, this.w - wipeX, this.h);
+    ctx.clip();
+    this.renderEpoch(stars, movers, eB, bandIdx, zoom, panX, panY);
+    ctx.restore();
+
+    ctx.strokeStyle = "rgba(123,92,255,0.8)";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(wipeX, 0);
+    ctx.lineTo(wipeX, this.h);
+    ctx.stroke();
+
+    ctx.fillStyle = "rgba(123,92,255,0.7)";
+    ctx.font = "10px 'JetBrains Mono'";
+    ctx.textAlign = "right";
+    ctx.fillText(`Epoch ${eA + 1}`, wipeX - 8, 20);
+    ctx.textAlign = "left";
+    ctx.fillText(`Epoch ${eB + 1}`, wipeX + 8, 20);
+  }
+}
+
+/* ═══════════════════════════════════════════════════════
+   SPECTRAL CHART
+   ═══════════════════════════════════════════════════════ */
+class SpectralChart {
+  constructor(canvas) {
+    this.canvas = canvas;
+    this.ctx = canvas.getContext("2d");
+  }
+
+  draw(spectra, objectType, activeBand) {
+    const c = this.canvas;
+    const parent = c.parentElement;
+    const dpr = window.devicePixelRatio || 1;
+    c.width = parent.clientWidth * dpr;
+    c.height = 180 * dpr;
+    c.style.width = parent.clientWidth + "px";
+    c.style.height = "180px";
+
+    const ctx = this.ctx;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const W = parent.clientWidth, H = 180;
+    const pad = { l: 40, r: 12, t: 12, b: 28 };
+    const pw = W - pad.l - pad.r, ph = H - pad.t - pad.b;
+
+    ctx.clearRect(0, 0, W, H);
+
+    ctx.strokeStyle = "rgba(255,255,255,0.05)";
+    ctx.lineWidth = 0.5;
+    for (let i = 0; i <= 5; i++) {
+      const y = pad.t + (ph / 5) * i;
+      ctx.beginPath(); ctx.moveTo(pad.l, y); ctx.lineTo(pad.l + pw, y); ctx.stroke();
+    }
+    const wTicks = [1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5];
+    ctx.fillStyle = "rgba(255,255,255,0.3)";
+    ctx.font = "9px 'JetBrains Mono'";
+    ctx.textAlign = "center";
+    for (const wt of wTicks) {
+      const x = pad.l + ((wt - LAMBDA_MIN) / (LAMBDA_MAX - LAMBDA_MIN)) * pw;
+      ctx.beginPath(); ctx.moveTo(x, pad.t); ctx.lineTo(x, pad.t + ph); ctx.stroke();
+      ctx.fillText(wt.toFixed(1), x, H - 6);
+    }
+    ctx.fillText("Wavelength (μm)", pad.l + pw / 2, H - 0);
+
+    ctx.save();
+    ctx.translate(10, pad.t + ph / 2);
+    ctx.rotate(-Math.PI / 2);
+    ctx.textAlign = "center";
+    ctx.fillStyle = "rgba(255,255,255,0.3)";
+    ctx.fillText("Relative Flux", 0, 0);
+    ctx.restore();
+
+    ctx.textAlign = "right";
+    for (let i = 0; i <= 4; i++) {
+      const v = (i / 4).toFixed(1);
+      const y = pad.t + ph - (ph / 4) * i;
+      ctx.fillText(v, pad.l - 4, y + 3);
+    }
+
+    const features = [];
+    if (objectType === "browndwarf") {
+      features.push({ w: 3.3, label: "CH₄", color: "rgba(255,64,96,0.3)" });
+      features.push({ w: 2.7, label: "H₂O", color: "rgba(100,180,255,0.3)" });
+      features.push({ w: 1.4, label: "H₂O", color: "rgba(100,180,255,0.2)" });
+    } else if (objectType === "comet") {
+      features.push({ w: 4.26, label: "CO₂", color: "rgba(0,212,255,0.3)" });
+      features.push({ w: 4.67, label: "CO", color: "rgba(0,212,255,0.25)" });
+      features.push({ w: 3.0, label: "H₂O ice", color: "rgba(100,180,255,0.2)" });
+    } else if (objectType === "asteroid") {
+      features.push({ w: 4.5, label: "Thermal", color: "rgba(255,107,53,0.3)" });
+    }
+    for (const f of features) {
+      const fx = pad.l + ((f.w - LAMBDA_MIN) / (LAMBDA_MAX - LAMBDA_MIN)) * pw;
+      ctx.fillStyle = f.color;
+      ctx.fillRect(fx - 8, pad.t, 16, ph);
+      ctx.fillStyle = "rgba(255,255,255,0.5)";
+      ctx.font = "8px 'JetBrains Mono'";
+      ctx.textAlign = "center";
+      ctx.fillText(f.label, fx, pad.t + 10);
+    }
+
+    const colors = ["#00d4ff", "#ff6b35", "#00ff88"];
+    for (let si = 0; si < spectra.length; si++) {
+      const spec = spectra[si];
+      ctx.beginPath();
+      ctx.strokeStyle = colors[si];
+      ctx.lineWidth = 1.5;
+      ctx.globalAlpha = 0.9;
+      for (let i = 0; i < NUM_BANDS; i++) {
+        const x = pad.l + (i / (NUM_BANDS - 1)) * pw;
+        const y = pad.t + ph - spec[i] * ph;
+        if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
+
+    if (activeBand > 0) {
+      const bx = pad.l + ((activeBand - 1) / (NUM_BANDS - 1)) * pw;
+      ctx.strokeStyle = "rgba(255,204,0,0.8)";
+      ctx.lineWidth = 1;
+      ctx.setLineDash([4, 3]);
+      ctx.beginPath(); ctx.moveTo(bx, pad.t); ctx.lineTo(bx, pad.t + ph); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = "#ffcc00";
+      ctx.font = "9px 'JetBrains Mono'";
+      ctx.textAlign = "center";
+      ctx.fillText(`Band ${activeBand}`, bx, pad.t + ph + 12);
+    }
+  }
+}
+
+/* ═══════════════════════════════════════════════════════
+   MAIN APPLICATION
+   ═══════════════════════════════════════════════════════ */
+class App {
+  constructor() {
+    this.sectorIdx = 0;
+    this.mode = "blink";
+    this.epochPair = [0, 1];
+    this.blinkEpochCurrent = 0;
+    this.blinkSpeed = 2;
+    this.blinkTimer = null;
+    this.bandIdx = 0;
+    this.zoom = 1;
+    this.panX = 0; this.panY = 0;
+    this.wipeX = 0;
+    this.selectedObj = null;
+    this.userClassification = null;
+    this.userMarkers = [];
+    this.isDragging = false;
+    this.isWipeDragging = false;
+    this.dragStartX = 0; this.dragStartY = 0;
+    this.panStartX = 0; this.panStartY = 0;
+    this.sectorData = {};
+    this.canvas = document.getElementById("skyCanvas");
+    this.renderer = new Renderer(this.canvas);
+    this.spectralChart = new SpectralChart(document.getElementById("spectralCanvas"));
+    this.wipeX = this.renderer.w / 2;
+    this.init();
+  }
+
+  init() {
+    this.buildSectorTabs();
+    this.buildEpochDots();
+    this.loadSector(0);
+    this.bindEvents();
+    this.startBlink();
+    this.render();
+  }
+
+  buildSectorTabs() {
+    const container = document.getElementById("sectorTabs");
+    SECTORS.forEach((s, i) => {
+      const btn = document.createElement("button");
+      btn.className = "sector-tab" + (i === 0 ? " active" : "");
+      btn.textContent = s.name;
+      btn.addEventListener("click", () => this.switchSector(i));
+      container.appendChild(btn);
+    });
+  }
+
+  buildEpochDots() {
+    const container = document.getElementById("epochDots");
+    for (let i = 0; i < 3; i++) {
+      const dot = document.createElement("div");
+      dot.className = "epoch-dot" + (i === 0 ? " active" : "");
+      dot.title = `Epoch ${i + 1}: ${(2025 + i * 0.5).toFixed(1)}`;
+      container.appendChild(dot);
+    }
+  }
+
+  loadSector(idx) {
+    if (!this.sectorData[idx]) {
+      const sector = SECTORS[idx];
+      const rng = new Rand(sector.seed);
+      const stars = generateStars(sector, this.renderer.w, this.renderer.h);
+      const movers = createMovingObjects(rng, this.renderer.w, this.renderer.h);
+      this.sectorData[idx] = { stars, movers };
+    }
+    this.sectorIdx = idx;
+    this.selectedObj = null;
+    this.userClassification = null;
+    this.updateInfoPanel();
+    this.updateCoordDisplay();
+    this.render();
+  }
+
+  switchSector(idx) {
+    document.querySelectorAll(".sector-tab").forEach((t, i) => t.classList.toggle("active", i === idx));
+    this.panX = 0; this.panY = 0; this.zoom = 1;
+    this.loadSector(idx);
+  }
+
+  get stars() { return this.sectorData[this.sectorIdx]?.stars || []; }
+  get movers() { return this.sectorData[this.sectorIdx]?.movers || []; }
+
+  switchMode(mode) {
+    this.mode = mode;
+    document.querySelectorAll(".mode-btn").forEach(b => b.classList.toggle("active", b.dataset.mode === mode));
+    const label = document.getElementById("modeLabel");
+    const labels = { blink: "BLINK COMPARATOR", overlay: "RED / CYAN DIPOLE", diff: "DIFFERENCE MAP", wipe: "SPLIT-SCREEN WIPE" };
+    label.textContent = labels[mode];
+    label.className = "mode-overlay-label " + mode;
+    document.getElementById("wipeContainer").style.display = mode === "wipe" ? "block" : "none";
+    if (mode === "blink") this.startBlink(); else this.stopBlink();
+    document.getElementById("canvasPanel").classList.toggle("blink-active", mode === "blink");
+    this.render();
+  }
+
+  startBlink() {
+    this.stopBlink();
+    this.blinkTimer = setInterval(() => {
+      const pair = this.epochPair;
+      this.blinkEpochCurrent = this.blinkEpochCurrent === pair[0] ? pair[1] : pair[0];
+      this.updateEpochDots(this.blinkEpochCurrent);
+      this.render();
+    }, 1000 / this.blinkSpeed);
+  }
+
+  stopBlink() { if (this.blinkTimer) { clearInterval(this.blinkTimer); this.blinkTimer = null; } }
+
+  updateEpochDots(activeIdx) {
+    document.querySelectorAll(".epoch-dot").forEach((d, i) => d.classList.toggle("active", i === activeIdx));
+    document.getElementById("hudEpoch").textContent = (2025 + activeIdx * 0.5).toFixed(1);
+  }
+
+  updateCoordDisplay() {
+    const s = SECTORS[this.sectorIdx];
+    document.getElementById("coordDisplay").textContent = `RA ${s.ra}  Dec ${s.dec}  ·  ${s.name}`;
+  }
+
+  bindEvents() {
+    document.querySelectorAll(".mode-btn").forEach(b =>
+      b.addEventListener("click", () => this.switchMode(b.dataset.mode)));
+
+    document.addEventListener("keydown", (e) => {
+      if (e.code === "Space") { e.preventDefault(); this.toggleEpochManual(); }
+      if (e.key === "a" || e.key === "A") this.switchMode("blink");
+      if (e.key === "b" || e.key === "B") this.switchMode("overlay");
+      if (e.key === "c" || e.key === "C") this.switchMode("diff");
+      if (e.key === "d" || e.key === "D") this.switchMode("wipe");
+    });
+
+    const bandSlider = document.getElementById("bandSlider");
+    bandSlider.addEventListener("input", () => {
+      this.bandIdx = parseInt(bandSlider.value);
+      const wl = bandToWavelength(this.bandIdx - 1);
+      document.getElementById("bandNum").textContent = this.bandIdx;
+      document.getElementById("bandWavelength").textContent = `λ = ${wl.toFixed(2)} μm`;
+      document.getElementById("hudBand").textContent = `λ=${wl.toFixed(2)}μm`;
+      document.querySelectorAll(".filter-btn").forEach(b => b.classList.remove("active"));
+      this.render();
+      if (this.selectedObj) this.drawSpectralChart();
+    });
+
+    document.querySelectorAll(".filter-btn").forEach(b => {
+      b.addEventListener("click", () => {
+        document.querySelectorAll(".filter-btn").forEach(x => x.classList.remove("active"));
+        b.classList.add("active");
+        const val = parseInt(b.dataset.band);
+        this.bandIdx = val;
+        bandSlider.value = val === 0 ? 1 : val;
+        const wl = val === 0 ? 0.75 : bandToWavelength(val - 1);
+        document.getElementById("bandNum").textContent = val === 0 ? "ALL" : val;
+        document.getElementById("bandWavelength").textContent = val === 0 ? "Composite" : `λ = ${wl.toFixed(2)} μm`;
+        document.getElementById("hudBand").textContent = val === 0 ? "Composite" : `λ=${wl.toFixed(2)}μm`;
+        this.render();
+        if (this.selectedObj) this.drawSpectralChart();
+      });
+    });
+
+    const speedSlider = document.getElementById("speedSlider");
+    speedSlider.addEventListener("input", () => {
+      this.blinkSpeed = parseInt(speedSlider.value);
+      document.getElementById("speedVal").textContent = this.blinkSpeed + " Hz";
+      if (this.mode === "blink") this.startBlink();
+    });
+
+    const epochPairSel = document.getElementById("epochPairSel");
+    epochPairSel.addEventListener("change", () => {
+      this.epochPair = epochPairSel.value.split(",").map(Number);
+      this.blinkEpochCurrent = this.epochPair[0];
+      if (this.mode === "blink") this.startBlink();
+      this.render();
+    });
+
+    this.canvas.addEventListener("mousedown", (e) => {
+      if (this.mode === "wipe") return;
+      this.isDragging = true;
+      this.dragStartX = e.clientX;
+      this.dragStartY = e.clientY;
+      this.panStartX = this.panX;
+      this.panStartY = this.panY;
+    });
+
+    this.canvas.addEventListener("mousemove", (e) => {
+      if (this.isDragging) {
+        this.panX = this.panStartX + (e.clientX - this.dragStartX);
+        this.panY = this.panStartY + (e.clientY - this.dragStartY);
+        this.render();
+      }
+    });
+
+    this.canvas.addEventListener("mouseup", (e) => {
+      if (this.isDragging && Math.abs(e.clientX - this.dragStartX) < 4 && Math.abs(e.clientY - this.dragStartY) < 4) {
+        this.handleCanvasClick(e);
+      }
+      this.isDragging = false;
+    });
+
+    this.canvas.addEventListener("wheel", (e) => {
+      e.preventDefault();
+      const rect = this.canvas.getBoundingClientRect();
+      const mx = e.clientX - rect.left;
+      const my = e.clientY - rect.top;
+      const oldZoom = this.zoom;
+      const delta = e.deltaY > 0 ? 0.9 : 1.1;
+      this.zoom = Math.max(0.5, Math.min(8, this.zoom * delta));
+      this.panX = mx - (mx - this.panX) * (this.zoom / oldZoom);
+      this.panY = my - (my - this.panY) * (this.zoom / oldZoom);
+      document.getElementById("hudZoom").textContent = this.zoom.toFixed(1) + "×";
+      this.render();
+    }, { passive: false });
+
+    const wipeHandle = document.getElementById("wipeHandle");
+    const wipeLine = document.getElementById("wipeLine");
+    wipeHandle.addEventListener("mousedown", (e) => {
+      e.stopPropagation();
+      this.isWipeDragging = true;
+    });
+    document.addEventListener("mousemove", (e) => {
+      if (this.isWipeDragging) {
+        const rect = this.canvas.parentElement.getBoundingClientRect();
+        this.wipeX = Math.max(20, Math.min(rect.width - 20, e.clientX - rect.left));
+        wipeLine.style.left = this.wipeX + "px";
+        wipeHandle.style.left = this.wipeX + "px";
+        this.render();
+      }
+    });
+    document.addEventListener("mouseup", () => { this.isWipeDragging = false; });
+
+    this.wipeX = this.renderer.w / 2;
+    wipeLine.style.left = this.wipeX + "px";
+    wipeHandle.style.left = this.wipeX + "px";
+
+    document.querySelectorAll(".classify-btn").forEach(b => {
+      b.addEventListener("click", () => {
+        document.querySelectorAll(".classify-btn").forEach(x => x.classList.remove("selected", "c-asteroid", "c-browndwarf", "c-comet", "c-artifact"));
+        b.classList.add("selected", "c-" + b.dataset.cls);
+        this.userClassification = b.dataset.cls;
+        document.getElementById("submitBtn").disabled = !this.selectedObj;
+      });
+    });
+
+    document.getElementById("submitBtn").addEventListener("click", () => this.submitClassification());
+
+    window.addEventListener("resize", () => {
+      this.renderer.resize();
+      this.wipeX = this.renderer.w / 2;
+      const wipeLine = document.getElementById("wipeLine");
+      const wipeHandle = document.getElementById("wipeHandle");
+      wipeLine.style.left = this.wipeX + "px";
+      wipeHandle.style.left = this.wipeX + "px";
+      this.sectorData = {};
+      this.loadSector(this.sectorIdx);
+    });
+  }
+
+  toggleEpochManual() {
+    if (this.mode === "blink") {
+      this.blinkEpochCurrent = this.blinkEpochCurrent === this.epochPair[0] ? this.epochPair[1] : this.epochPair[0];
+      this.updateEpochDots(this.blinkEpochCurrent);
+      this.render();
+    }
+  }
+
+  handleCanvasClick(e) {
+    const rect = this.canvas.getBoundingClientRect();
+    const mx = e.clientX - rect.left;
+    const my = e.clientY - rect.top;
+    const worldX = (mx - this.panX) / this.zoom;
+    const worldY = (my - this.panY) / this.zoom;
+    const cx = this.renderer.w / 2, cy = this.renderer.h / 2;
+    const wx = worldX + cx * (1 - 1);
+    const wy = worldY + cy * (1 - 1);
+
+    let closestObj = null;
+    let closestDist = 20;
+
+    for (const obj of this.movers) {
+      for (let ei = 0; ei < 3; ei++) {
+        const ox = obj.baseX + obj.dxPerEpoch * ei;
+        const oy = obj.baseY + obj.dyPerEpoch * ei;
+        const dist = Math.hypot(wx - ox, wy - oy);
+        if (dist < closestDist) {
+          closestDist = dist;
+          closestObj = obj;
+        }
+      }
+    }
+
+    if (closestObj) {
+      this.selectedObj = closestObj;
+      this.updateInfoPanel();
+      this.drawSpectralChart();
+      this.showMarker(closestObj);
+    } else {
+      for (const star of this.stars) {
+        const dist = Math.hypot(wx - star.x, wy - star.y);
+        if (dist < (star.isGalaxy ? star.radius : 8)) {
+          this.selectedObj = { ...star, id: "star", name: star.isGalaxy ? "Background Galaxy" : "Field Star", type: "star", label: star.isGalaxy ? "Extended Source" : `T=${star.temp}K Star`, angularVelocity: 0, aiConf: 0, votes: { asteroid: 0, browndwarf: 0, comet: 0, artifact: 0 }, spectrum: star.spectrum };
+          this.updateInfoPanel();
+          this.drawSpectralChart();
+          break;
+        }
+      }
+    }
+    document.getElementById("hudObjs").textContent = this.userMarkers.length;
+  }
+
+  showMarker(obj) {
+    const layer = document.getElementById("markerLayer");
+    const existing = layer.querySelector(`[data-objid="${obj.id}"]`);
+    if (existing) return;
+
+    const epochIdx = this.mode === "blink" ? this.blinkEpochCurrent : this.epochPair[0];
+    const ox = obj.baseX + obj.dxPerEpoch * epochIdx;
+    const oy = obj.baseY + obj.dyPerEpoch * epochIdx;
+    const sx = ox * this.zoom + this.panX;
+    const sy = oy * this.zoom + this.panY;
+
+    const marker = document.createElement("div");
+    marker.className = "marker-ring";
+    marker.dataset.objid = obj.id;
+    marker.style.width = "28px";
+    marker.style.height = "28px";
+    marker.style.left = (sx - 14) + "px";
+    marker.style.top = (sy - 14) + "px";
+    layer.appendChild(marker);
+
+    if (!this.userMarkers.find(m => m.id === obj.id)) {
+      this.userMarkers.push(obj);
+      document.getElementById("hudObjs").textContent = this.userMarkers.length;
+    }
+  }
+
+  updateInfoPanel() {
+    const wrap = document.getElementById("objInfoWrap");
+    const noSel = document.getElementById("noSelection");
+    const chartWrap = document.getElementById("chartWrap");
+
+    if (!this.selectedObj) {
+      wrap.style.display = "none";
+      noSel.style.display = "block";
+      chartWrap.style.display = "none";
+      this.updateConsensus(null);
+      return;
+    }
+
+    noSel.style.display = "none";
+    wrap.style.display = "block";
+    chartWrap.style.display = "block";
+
+    const obj = this.selectedObj;
+    const typeClass = obj.type === "star" ? "" : obj.type;
+    const info = document.getElementById("objInfo");
+    info.innerHTML = `
+      <div class="obj-name">${obj.name}</div>
+      <span class="obj-type ${typeClass}">${obj.label}</span>
+      <div class="obj-stats">
+        <div class="obj-stat"><span class="stat-label">Type</span><span class="stat-val">${obj.label}</span></div>
+        <div class="obj-stat"><span class="stat-label">Angular Vel</span><span class="stat-val">${obj.angularVelocity ? obj.angularVelocity.toFixed(1) + '″/mo' : '0.0″/mo'}</span></div>
+        <div class="obj-stat"><span class="stat-label">Temp</span><span class="stat-val">${obj.temp ? obj.temp + ' K' : '—'}</span></div>
+        <div class="obj-stat"><span class="stat-label">NIR Mag</span><span class="stat-val">${obj.mag ? (18 + (1 - obj.mag) * 6).toFixed(1) : '—'}</span></div>
+      </div>`;
+    this.updateConsensus(obj);
+  }
+
+  updateConsensus(obj) {
+    if (!obj || obj.type === "star") {
+      document.getElementById("aiConf").textContent = "—";
+      document.getElementById("aiConfBar").style.width = "0%";
+      document.getElementById("commVotes").textContent = "—";
+      document.getElementById("consLabel").textContent = "—";
+      document.getElementById("submitBtn").disabled = true;
+      return;
+    }
+
+    const conf = obj.aiConf || 0;
+    document.getElementById("aiConf").textContent = (conf * 100).toFixed(0) + "%";
+    const bar = document.getElementById("aiConfBar");
+    bar.style.width = (conf * 100) + "%";
+    bar.style.background = conf > 0.8 ? "var(--green)" : conf > 0.5 ? "var(--yellow)" : "var(--red)";
+
+    const v = obj.votes;
+    const total = v.asteroid + v.browndwarf + v.comet + v.artifact;
+    document.getElementById("commVotes").textContent = total + " votes";
+
+    const maxType = Object.entries(v).sort((a, b) => b[1] - a[1])[0];
+    const consensus = maxType[1] / total;
+    const typeLabels = { asteroid: "Asteroid", browndwarf: "Brown Dwarf", comet: "Comet", artifact: "Artifact" };
+    document.getElementById("consLabel").textContent =
+      consensus > 0.7 ? `${typeLabels[maxType[0]]} (${(consensus * 100).toFixed(0)}%)` : "No consensus";
+    document.getElementById("consLabel").style.color =
+      consensus > 0.7 ? "var(--green)" : "var(--yellow)";
+    document.getElementById("submitBtn").disabled = !this.userClassification;
+  }
+
+  drawSpectralChart() {
+    if (!this.selectedObj) return;
+    const obj = this.selectedObj;
+    const spectra = [];
+    if (obj.spectrum) {
+      for (let e = 0; e < 3; e++) {
+        const spec = new Float32Array(NUM_BANDS);
+        for (let i = 0; i < NUM_BANDS; i++) {
+          const jitter = 1.0 + (Math.sin(i * 13.7 + e * 47) * 0.03);
+          spec[i] = obj.spectrum[i] * jitter;
+        }
+        spectra.push(spec);
+      }
+    }
+    this.spectralChart.draw(spectra, obj.type, this.bandIdx);
+  }
+
+  submitClassification() {
+    if (!this.selectedObj || !this.userClassification) return;
+    const obj = this.selectedObj;
+    if (obj.votes) {
+      obj.votes[this.userClassification] = (obj.votes[this.userClassification] || 0) + 1;
+    }
+    this.updateConsensus(obj);
+    this.showToast(`Classification submitted: ${this.userClassification.toUpperCase()} for ${obj.name}`);
+    document.getElementById("submitBtn").disabled = true;
+  }
+
+  showToast(msg) {
+    const t = document.getElementById("toast");
+    t.textContent = "✓ " + msg;
+    t.classList.add("show");
+    setTimeout(() => t.classList.remove("show"), 2500);
+  }
+
+  render() {
+    const r = this.renderer;
+    const stars = this.stars;
+    const movers = this.movers;
+    const [eA, eB] = this.epochPair;
+
+    switch (this.mode) {
+      case "blink":
+        r.renderBlink(stars, movers, this.blinkEpochCurrent, this.bandIdx, this.zoom, this.panX + r.w / 2, this.panY + r.h / 2);
+        break;
+      case "overlay":
+        r.renderOverlay(stars, movers, eA, eB, this.bandIdx, this.zoom, this.panX + r.w / 2, this.panY + r.h / 2);
+        break;
+      case "diff":
+        r.renderDiff(stars, movers, eA, eB, this.bandIdx, this.zoom, this.panX + r.w / 2, this.panY + r.h / 2);
+        break;
+      case "wipe":
+        r.renderWipe(stars, movers, eA, eB, this.bandIdx, this.zoom, this.panX + r.w / 2, this.panY + r.h / 2, this.wipeX);
+        break;
+    }
+
+    this.updateMarkerPositions();
+  }
+
+  updateMarkerPositions() {
+    const layer = document.getElementById("markerLayer");
+    const markers = layer.querySelectorAll(".marker-ring");
+    const epochIdx = this.mode === "blink" ? this.blinkEpochCurrent : this.epochPair[0];
+    markers.forEach(m => {
+      const obj = this.movers.find(o => o.id === m.dataset.objid);
+      if (obj) {
+        const ox = obj.baseX + obj.dxPerEpoch * epochIdx;
+        const oy = obj.baseY + obj.dyPerEpoch * epochIdx;
+        const sx = ox * this.zoom + this.panX + this.renderer.w / 2 * (this.zoom - 1) + (this.renderer.w / 2 - this.renderer.w / 2 * this.zoom);
+        const sy = oy * this.zoom + this.panY + this.renderer.h / 2 * (this.zoom - 1) + (this.renderer.h / 2 - this.renderer.h / 2 * this.zoom);
+        const finalX = this.panX + ox * this.zoom + (this.renderer.w / 2) * (1 - this.zoom);
+        const finalY = this.panY + oy * this.zoom + (this.renderer.h / 2) * (1 - this.zoom);
+        m.style.left = (finalX - 14) + "px";
+        m.style.top = (finalY - 14) + "px";
+      }
+    });
+  }
+}
+
+/* ── Bootstrap ── */
+const app = new App();
+</script>
+</body>
+</html>
+

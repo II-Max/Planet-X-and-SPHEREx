@@ -1,0 +1,2188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SPHEREx ChronoSpectra — Multi-Epoch Sky & Spectral Explorer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ── CSS Reset & Fundamental Palette ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg-deep: #05070d;
+  --bg-surface: #0a0f1d;
+  --bg-panel: rgba(12, 19, 36, 0.94);
+  --bg-card: rgba(18, 27, 49, 0.85);
+  --border-subtle: rgba(70, 120, 210, 0.16);
+  --border-active: rgba(0, 229, 255, 0.45);
+  --border-glow: 0 0 16px rgba(0, 212, 255, 0.25);
+  
+  --accent-cyan: #00f0ff;
+  --accent-blue: #2575fc;
+  --accent-amber: #ffb703;
+  --accent-emerald: #00f59b;
+  --accent-crimson: #ff3366;
+  --accent-purple: #9d4edd;
+  
+  --text-bright: #f0f4fc;
+  --text-main: #b8c7e0;
+  --text-muted: #64748b;
+  --text-dim: #3d4a63;
+
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+}
+
+html, body {
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  background-color: var(--bg-deep);
+  color: var(--text-main);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  line-height: 1.4;
+  user-select: none;
+}
+
+/* ── Application Grid Layout ── */
+#app {
+  display: grid;
+  grid-template-rows: 52px 1fr 230px;
+  grid-template-columns: 1fr 400px;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* ── Global Header Bar ── */
+.app-header {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  background: linear-gradient(180deg, rgba(16, 25, 48, 0.98), rgba(10, 15, 30, 0.95));
+  border-bottom: 1px solid var(--border-subtle);
+  z-index: 50;
+}
+.brand-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.mission-badges {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.badge-tag {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  padding: 2px 7px;
+  border-radius: var(--radius-sm);
+  text-transform: uppercase;
+}
+.badge-nasa { background: #0b3d91; color: #fff; border: 1px solid rgba(255,255,255,0.2); }
+.badge-csa { background: #d90429; color: #fff; border: 1px solid rgba(255,255,255,0.2); }
+.badge-gaia { background: #2b2d42; color: var(--accent-cyan); border: 1px solid var(--border-subtle); }
+.brand-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-bright);
+  letter-spacing: 0.5px;
+}
+.brand-title span {
+  background: linear-gradient(135deg, var(--accent-cyan), var(--accent-emerald));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.brand-version {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-muted);
+  border: 1px solid var(--border-subtle);
+  padding: 2px 5px;
+  border-radius: 3px;
+}
+
+.astrometric-readout {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-muted);
+}
+.astrometric-readout .item span { color: var(--accent-cyan); font-weight: 600; }
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.btn-header {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-bright);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  padding: 5px 12px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+}
+.btn-header:hover {
+  background: rgba(0, 240, 255, 0.12);
+  border-color: var(--accent-cyan);
+  color: var(--accent-cyan);
+}
+.btn-header.highlight {
+  background: linear-gradient(135deg, rgba(0,240,255,0.2), rgba(37,117,252,0.2));
+  border-color: var(--accent-cyan);
+  box-shadow: 0 0 10px rgba(0,240,255,0.2);
+}
+
+/* ── Central Sky Viewport ── */
+.viewport-container {
+  position: relative;
+  background-color: #020408;
+  overflow: hidden;
+  border-right: 1px solid var(--border-subtle);
+  border-bottom: 1px solid var(--border-subtle);
+}
+#skyCanvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  cursor: crosshair;
+}
+
+/* ── WiseView Style Overlays & Toolbars ── */
+.wiseview-toolbar {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 20;
+  pointer-events: none;
+}
+.wiseview-toolbar > * { pointer-events: auto; }
+
+.toolbar-card {
+  background: var(--bg-panel);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 8px 12px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.blink-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.btn-blink {
+  background: rgba(255,255,255,0.06);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-bright);
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 12px;
+  transition: all 0.15s ease;
+}
+.btn-blink:hover {
+  background: rgba(0,240,255,0.2);
+  border-color: var(--accent-cyan);
+  color: var(--accent-cyan);
+}
+.btn-blink.active {
+  background: var(--accent-cyan);
+  color: #000;
+  font-weight: 700;
+  box-shadow: 0 0 10px rgba(0,240,255,0.5);
+}
+
+.epoch-steppers {
+  display: flex;
+  background: rgba(0,0,0,0.3);
+  padding: 2px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-subtle);
+}
+.epoch-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  padding: 4px 10px;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.epoch-btn:hover { color: var(--text-bright); }
+.epoch-btn.active {
+  background: rgba(0,240,255,0.18);
+  color: var(--accent-cyan);
+  font-weight: 600;
+}
+
+.slider-pill {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+.slider-pill label { color: var(--text-muted); }
+.slider-pill span { color: var(--accent-cyan); min-width: 38px; }
+input[type="range"] {
+  -webkit-appearance: none;
+  background: rgba(255,255,255,0.1);
+  height: 4px;
+  border-radius: 2px;
+  outline: none;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--accent-cyan);
+  cursor: pointer;
+  box-shadow: 0 0 6px rgba(0,240,255,0.6);
+}
+
+/* ── Rendering Modes Row ── */
+.render-modes {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(0,0,0,0.4);
+  padding: 3px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-subtle);
+}
+.mode-toggle {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  padding: 4px 8px;
+  border-radius: 3px;
+  cursor: pointer;
+}
+.mode-toggle:hover { color: var(--text-bright); }
+.mode-toggle.active {
+  background: rgba(37,117,252,0.3);
+  color: #fff;
+  font-weight: 600;
+}
+
+/* ── Gaia DR3 & Filters Bar (Top-Right) ── */
+.astrometry-toolbar {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  z-index: 20;
+  pointer-events: none;
+}
+.astrometry-toolbar > * { pointer-events: auto; }
+
+.filter-toggle-pill {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 6px 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.filter-toggle-pill:hover {
+  border-color: rgba(0,240,255,0.4);
+}
+.filter-toggle-pill.active {
+  background: rgba(0, 240, 255, 0.1);
+  border-color: var(--accent-cyan);
+  box-shadow: var(--border-glow);
+}
+.filter-toggle-pill .indicator {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--text-dim);
+  transition: all 0.2s;
+}
+.filter-toggle-pill.active .indicator {
+  background: var(--accent-cyan);
+  box-shadow: 0 0 8px var(--accent-cyan);
+}
+.filter-toggle-pill.gaia-mask.active {
+  border-color: var(--accent-amber);
+}
+.filter-toggle-pill.gaia-mask.active .indicator {
+  background: var(--accent-amber);
+  box-shadow: 0 0 8px var(--accent-amber);
+}
+.pill-title {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-bright);
+}
+.pill-desc {
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+/* ── Reticle HUD & Scale Marker ── */
+.canvas-hud-overlay {
+  position: absolute;
+  bottom: 12px;
+  left: 12px;
+  display: flex;
+  gap: 12px;
+  pointer-events: none;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-muted);
+}
+.hud-pill {
+  background: rgba(6, 10, 20, 0.85);
+  border: 1px solid var(--border-subtle);
+  padding: 4px 10px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.hud-pill span { color: var(--accent-cyan); }
+
+.fov-scale {
+  position: absolute;
+  bottom: 12px;
+  right: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  pointer-events: none;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-muted);
+}
+.scale-bar {
+  width: 100px;
+  height: 3px;
+  background: var(--text-muted);
+  position: relative;
+  margin-top: 3px;
+}
+.scale-bar::before, .scale-bar::after {
+  content: '';
+  position: absolute;
+  top: -4px;
+  width: 1px;
+  height: 11px;
+  background: var(--text-muted);
+}
+.scale-bar::before { left: 0; }
+.scale-bar::after { right: 0; }
+
+/* ── Right Inspector Panel ── */
+.right-inspector {
+  grid-column: 2;
+  grid-row: 2;
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--border-subtle);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+.panel-tab-header {
+  display: flex;
+  border-bottom: 1px solid var(--border-subtle);
+  background: rgba(0,0,0,0.2);
+}
+.tab-link {
+  flex: 1;
+  padding: 12px 10px;
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s;
+}
+.tab-link:hover { color: var(--text-bright); }
+.tab-link.active {
+  color: var(--accent-cyan);
+  border-bottom-color: var(--accent-cyan);
+  background: rgba(0,240,255,0.04);
+}
+
+.inspector-body {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* ── Selected Object Card ── */
+.target-summary-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  position: relative;
+  overflow: hidden;
+}
+.target-summary-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 4px;
+  height: 100%;
+  background: var(--accent-cyan);
+}
+.target-summary-card.type-browndwarf::before { background: var(--accent-crimson); }
+.target-summary-card.type-asteroid::before { background: var(--accent-amber); }
+.target-summary-card.type-comet::before { background: var(--accent-emerald); }
+.target-summary-card.type-star::before { background: var(--accent-blue); }
+
+.card-title-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+.target-id {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-bright);
+}
+.target-badge {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+  background: rgba(0,240,255,0.15);
+  color: var(--accent-cyan);
+  border: 1px solid rgba(0,240,255,0.3);
+}
+.target-badge.browndwarf { background: rgba(255,51,102,0.15); color: var(--accent-crimson); border-color: rgba(255,51,102,0.3); }
+.target-badge.asteroid { background: rgba(255,183,3,0.15); color: var(--accent-amber); border-color: rgba(255,183,3,0.3); }
+.target-badge.comet { background: rgba(0,245,155,0.15); color: var(--accent-emerald); border-color: rgba(0,245,155,0.3); }
+.target-badge.star { background: rgba(37,117,252,0.15); color: var(--accent-blue); border-color: rgba(37,117,252,0.3); }
+
+.target-metrics {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+.metric-box {
+  background: rgba(0,0,0,0.3);
+  padding: 6px 8px;
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(255,255,255,0.04);
+}
+.metric-box .label { color: var(--text-muted); font-size: 9px; }
+.metric-box .value { color: var(--text-bright); font-weight: 600; margin-top: 2px; }
+
+/* ── Cross-Match Panels ── */
+.crossmatch-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.section-subtitle {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-bright);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.gaia-status-box {
+  background: rgba(43, 45, 66, 0.4);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 10px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 3px;
+  width: fit-content;
+}
+.status-pill.matched { background: rgba(0,245,155,0.15); color: var(--accent-emerald); }
+.status-pill.unmatched { background: rgba(255,51,102,0.15); color: var(--accent-crimson); }
+
+.btn-neossat-trigger {
+  width: 100%;
+  padding: 10px;
+  background: linear-gradient(135deg, rgba(217, 4, 41, 0.2), rgba(139, 0, 0, 0.2));
+  border: 1px solid rgba(217, 4, 41, 0.5);
+  border-radius: var(--radius-sm);
+  color: #ff6b6b;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.2s;
+}
+.btn-neossat-trigger:hover {
+  background: linear-gradient(135deg, rgba(217, 4, 41, 0.35), rgba(139, 0, 0, 0.35));
+  border-color: #ff4d6d;
+  box-shadow: 0 0 12px rgba(217, 4, 41, 0.4);
+  color: #fff;
+}
+
+/* ── Citizen Science Voting Drawer ── */
+.citizen-vote-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: auto;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-subtle);
+}
+.vote-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+.btn-vote {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 8px 6px;
+  color: var(--text-main);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.15s;
+}
+.btn-vote:hover {
+  background: rgba(0,240,255,0.1);
+  border-color: var(--accent-cyan);
+  color: var(--accent-cyan);
+}
+.btn-vote.active {
+  background: var(--accent-cyan);
+  color: #000;
+  font-weight: 700;
+}
+
+/* ── Bottom Spectral Analysis Module ── */
+.spectral-explorer-dock {
+  grid-column: 1 / -1;
+  grid-row: 3;
+  background: var(--bg-surface);
+  border-top: 1px solid var(--border-subtle);
+  display: grid;
+  grid-template-columns: 320px 1fr 280px;
+  padding: 10px 16px;
+  gap: 16px;
+  z-index: 30;
+}
+
+/* Sub-panel 1: Band selection & presets */
+.band-controls-column {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border-right: 1px solid var(--border-subtle);
+  padding-right: 16px;
+}
+.preset-chips {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.preset-btn {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 5px 8px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-muted);
+  text-align: left;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  transition: all 0.15s;
+}
+.preset-btn:hover {
+  color: var(--text-bright);
+  background: rgba(255,255,255,0.06);
+}
+.preset-btn.active {
+  background: rgba(0,240,255,0.12);
+  border-color: var(--accent-cyan);
+  color: var(--accent-cyan);
+  font-weight: 600;
+}
+
+/* Sub-panel 2: Interactive Spectrum Canvas */
+.spectrum-canvas-wrap {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background: #04060c;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+#spectrumChart {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* Sub-panel 3: Diagnostic Molecule Indicators */
+.diagnostics-column {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  border-left: 1px solid var(--border-subtle);
+  padding-left: 16px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+.diag-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 6px;
+  border-radius: var(--radius-sm);
+  background: rgba(0,0,0,0.2);
+}
+.diag-row .mol-label { color: var(--text-muted); font-size: 10px; }
+.diag-row .mol-val { font-weight: 600; color: var(--text-bright); }
+.diag-row.highlight-ch4 { border-left: 3px solid var(--accent-crimson); }
+.diag-row.highlight-co2 { border-left: 3px solid var(--accent-emerald); }
+.diag-row.highlight-thermal { border-left: 3px solid var(--accent-amber); }
+
+/* ── NEOSSat Modal Drawer ── */
+.modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(2, 4, 10, 0.85);
+  backdrop-filter: blur(10px);
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+}
+.modal-backdrop.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+.neossat-modal-window {
+  width: 820px;
+  max-width: 90vw;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 12px 48px rgba(0,0,0,0.8), 0 0 32px rgba(217, 4, 41, 0.2);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: modalSlideUp 0.3s ease;
+}
+@keyframes modalSlideUp {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.modal-header {
+  padding: 16px 20px;
+  background: linear-gradient(90deg, rgba(217, 4, 41, 0.2), rgba(20, 25, 45, 0.9));
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.modal-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.modal-close-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 20px;
+  cursor: pointer;
+}
+.modal-close-btn:hover { color: #fff; }
+
+.modal-content-grid {
+  padding: 20px;
+  display: grid;
+  grid-template-columns: 1fr 300px;
+  gap: 20px;
+}
+.tracking-strip-box {
+  background: #020306;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.strip-canvas-wrap {
+  width: 100%;
+  height: 220px;
+  background: #000;
+  border-radius: var(--radius-sm);
+  position: relative;
+  overflow: hidden;
+}
+#neossatCanvas {
+  width: 100%;
+  height: 100%;
+}
+.neossat-meta-table {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.meta-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 4px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+.meta-row .k { color: var(--text-muted); }
+.meta-row .v { color: var(--text-bright); font-weight: 600; }
+
+/* ── Toast Notification ── */
+.toast-notice {
+  position: fixed;
+  bottom: 245px;
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background: rgba(10, 20, 40, 0.95);
+  border: 1px solid var(--accent-cyan);
+  box-shadow: 0 0 20px rgba(0, 240, 255, 0.3);
+  color: var(--accent-cyan);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  padding: 8px 20px;
+  border-radius: var(--radius-sm);
+  pointer-events: none;
+  opacity: 0;
+  transition: all 0.25s ease;
+  z-index: 99;
+}
+.toast-notice.show {
+  transform: translateX(-50%) translateY(0);
+  opacity: 1;
+}
+</style>
+</head>
+<body>
+
+<div id="app">
+
+  <!-- Header -->
+  <header class="app-header">
+    <div class="brand-group">
+      <div class="mission-badges">
+        <span class="badge-tag badge-nasa">NASA</span>
+        <span class="badge-tag badge-csa">CSA-ASC</span>
+        <span class="badge-tag badge-gaia">ESA GAIA DR3</span>
+      </div>
+      <div class="brand-title">SPHEREx <span>ChronoSpectra</span></div>
+      <span class="brand-version">v2.4-Astro</span>
+    </div>
+
+    <div class="astrometric-readout">
+      <div class="item">FIELD: <span id="hdrField">Ecliptic Pole South</span></div>
+      <div class="item">RA: <span id="hdrRA">06h 00m 00.0s</span></div>
+      <div class="item">DEC: <span id="hdrDec">-66° 33′ 38″</span></div>
+      <div class="item">FOV: <span>45.0′</span></div>
+      <div class="item">SCALE: <span>6.2″/pix</span></div>
+    </div>
+
+    <div class="header-actions">
+      <button class="btn-header" id="btnResetView" title="Center on discovery field">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2v20M2 12h20"/></svg>
+        Reset FOV
+      </button>
+      <button class="btn-header highlight" id="btnExportCatalog">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+        Export VO-Table JSON
+      </button>
+    </div>
+  </header>
+
+  <!-- Central Sky Viewport -->
+  <main class="viewport-container" id="viewportContainer">
+    <canvas id="skyCanvas"></canvas>
+
+    <!-- Top-Left: WiseView Blinker & Stretch Controls -->
+    <div class="wiseview-toolbar">
+      <div class="toolbar-card">
+        <div class="blink-controls">
+          <button class="btn-blink" id="btnPlayPause" title="Play/Pause Blink [Spacebar]">▶</button>
+          <button class="btn-blink" id="btnStepPrev" title="Step Epoch Backward [Left Arrow]">⟨</button>
+          <button class="btn-blink" id="btnStepNext" title="Step Epoch Forward [Right Arrow]">⟩</button>
+        </div>
+
+        <div class="epoch-steppers">
+          <button class="epoch-btn active" data-epoch="0">E1: 2025.0</button>
+          <button class="epoch-btn" data-epoch="1">E2: 2025.5</button>
+          <button class="epoch-btn" data-epoch="2">E3: 2026.0</button>
+        </div>
+
+        <div class="slider-pill">
+          <label>BLINK:</label>
+          <input type="range" id="blinkRateSlider" min="1" max="10" step="0.5" value="2.5" style="width: 70px;">
+          <span id="blinkRateVal">2.5 Hz</span>
+        </div>
+      </div>
+
+      <div class="toolbar-card">
+        <div class="render-modes">
+          <button class="mode-toggle active" data-mode="standard" title="Direct NIR composite">Composite</button>
+          <button class="mode-toggle" data-mode="dipole" title="Epoch 1=Red, Epoch 2=Cyan">Red/Cyan Dipole</button>
+          <button class="mode-toggle" data-mode="diff" title="Epoch Subtraction |E2 - E1|">Difference</button>
+          <button class="mode-toggle" data-mode="invert" title="Negative Photographic Invert (WiseView style)">Invert</button>
+        </div>
+
+        <div class="slider-pill">
+          <label>STRETCH:</label>
+          <input type="range" id="contrastSlider" min="0.5" max="3.0" step="0.1" value="1.2" style="width: 70px;">
+          <button class="epoch-btn" id="btnZScale" style="border: 1px solid var(--border-subtle);" title="IRSA Auto ZScale">ZScale</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Top-Right: Gaia DR3 Astrometry Vector Layer -->
+    <div class="astrometry-toolbar">
+      <div class="filter-toggle-pill active" id="btnToggleGaiaVectors">
+        <div class="indicator"></div>
+        <div>
+          <div class="pill-title">Gaia DR3 Proper Motion</div>
+          <div class="pill-desc">Draw optical vector arrows</div>
+        </div>
+      </div>
+
+      <div class="filter-toggle-pill gaia-mask" id="btnToggleGaiaMask">
+        <div class="indicator"></div>
+        <div>
+          <div class="pill-title">Mask Known Gaia Stars</div>
+          <div class="pill-desc">Ghost optical catalog (False-Positive Killer)</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bottom Left HUD -->
+    <div class="canvas-hud-overlay">
+      <div class="hud-pill">BAND: <span id="hudBandName">RGB Full Composite</span></div>
+      <div class="hud-pill">PIXELS: <span>512 × 512</span></div>
+      <div class="hud-pill">TARGETS: <span id="hudTargetCount">4 In-Field</span></div>
+    </div>
+
+    <!-- Bottom Right Scale Bar -->
+    <div class="fov-scale">
+      <span>10 Arcminutes</span>
+      <div class="scale-bar"></div>
+    </div>
+  </main>
+
+  <!-- Right Inspector Panel -->
+  <aside class="right-inspector">
+    <div class="panel-tab-header">
+      <div class="tab-link active">Target Telemetry</div>
+      <div class="tab-link" id="tabAstroCatalog">Astrometric Catalog</div>
+    </div>
+
+    <div class="inspector-body">
+      <!-- Target Summary Card -->
+      <div class="target-summary-card type-browndwarf" id="targetCard">
+        <div class="card-title-row">
+          <div>
+            <div class="target-id" id="targName">SPX-J0600-6633 (Y-Dwarf)</div>
+            <div style="font-size:10px; color:var(--text-muted); font-family:var(--font-mono); margin-top:2px;" id="targCoords">RA 06h 00m 14s · Dec -66° 34′ 12″</div>
+          </div>
+          <span class="target-badge browndwarf" id="targBadge">Brown Dwarf</span>
+        </div>
+
+        <div class="target-metrics">
+          <div class="metric-box">
+            <div class="label">PROPER MOTION (μ)</div>
+            <div class="value" id="targPM">1,420 mas/yr</div>
+          </div>
+          <div class="metric-box">
+            <div class="label">EST. TEMPERATURE</div>
+            <div class="value" id="targTemp">~420 K (Ultra-cool)</div>
+          </div>
+          <div class="metric-box">
+            <div class="label">3.3μm CH₄ TROUGH</div>
+            <div class="value" id="targCH4">Deep Absorption</div>
+          </div>
+          <div class="metric-box">
+            <div class="label">GAIA DR3 MATCH</div>
+            <div class="value" id="targGaiaQuick">No Match (G &gt; 21.5)</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Gaia Astrometric Cross-Match Box -->
+      <div class="crossmatch-section">
+        <div class="section-subtitle">
+          <span>ESA GAIA DR3 Cross-Match</span>
+          <span style="font-size:9px; color:var(--accent-cyan);">RADIUS: 3.0″</span>
+        </div>
+        <div class="gaia-status-box" id="gaiaDetailBox">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <span class="status-pill unmatched" id="gaiaMatchPill">UNMATCHED IN GAIA DR3</span>
+            <span style="color:var(--text-muted);">Optical Limit: G=21.5</span>
+          </div>
+          <div style="margin-top:4px; color:var(--text-main); font-size:10px; line-height:1.4;" id="gaiaMatchDesc">
+            Target completely undetected in optical Gaia DR3 catalog. High near-infrared flux confirmed. Prime candidate for Ultra-Cool Sub-Stellar discovery!
+          </div>
+        </div>
+      </div>
+
+      <!-- CSA NEOSSat Cross-Match Trigger -->
+      <div class="crossmatch-section">
+        <div class="section-subtitle">
+          <span>CSA NEOSSat Rapid Optical Check</span>
+          <span style="font-size:9px; color:#ff6b6b;">CADC API</span>
+        </div>
+        <button class="btn-neossat-trigger" id="btnQueryNEOSSat">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M14.31 8l5.74 9.94M9.69 8h11.48M7.38 12l5.74-9.94M9.69 16L3.95 6.06M14.31 16H2.83M16.62 12l-5.74 9.94"/></svg>
+          Inspect CSA NEOSSat Optical Strip
+        </button>
+      </div>
+
+      <!-- Citizen Science Consensus HUD -->
+      <div class="citizen-vote-panel">
+        <div class="section-subtitle">
+          <span>Citizen Science Classification</span>
+          <span style="font-size:9px; color:var(--accent-emerald);">AI Conf: <b id="aiConfidence">94%</b></span>
+        </div>
+        <div class="vote-grid">
+          <button class="btn-vote active" data-vote="browndwarf">Brown Dwarf (142)</button>
+          <button class="btn-vote" data-vote="asteroid">Asteroid (12)</button>
+          <button class="btn-vote" data-vote="comet">Comet (3)</button>
+          <button class="btn-vote" data-vote="star">Known Star (0)</button>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Bottom 102-Band Spectral Explorer Dock -->
+  <footer class="spectral-explorer-dock">
+    <!-- Band Presets & Wavelength Slider -->
+    <div class="band-controls-column">
+      <div class="section-subtitle">
+        <span>SPHEREx 102-Band Explorer</span>
+        <span style="color:var(--accent-cyan); font-size:10px;" id="currentWavelength">λ = All Bands</span>
+      </div>
+
+      <div class="slider-pill" style="margin-top:2px;">
+        <label>BAND:</label>
+        <input type="range" id="bandSlider" min="0" max="102" value="0" style="flex:1;">
+        <span id="bandNumberLabel">ALL</span>
+      </div>
+
+      <div class="preset-chips">
+        <button class="preset-btn active" data-preset="all">Full RGB Composite <span>0.75 - 5.0 μm</span></button>
+        <button class="preset-btn" data-preset="methane">CH₄ Methane Hunter <span>3.3 μm</span></button>
+        <button class="preset-btn" data-preset="comet">CO₂ Ice &amp; Volatiles <span>4.26 μm</span></button>
+        <button class="preset-btn" data-preset="thermal">Thermal Asteroid <span>4.8 μm</span></button>
+      </div>
+    </div>
+
+    <!-- Central 102-Band Spectrum Plot -->
+    <div class="spectrum-canvas-wrap">
+      <canvas id="spectrumChart"></canvas>
+    </div>
+
+    <!-- Diagnostic Molecular Bands Readout -->
+    <div class="diagnostics-column">
+      <div class="section-subtitle">
+        <span>Spectral Signatures</span>
+        <span style="font-size:9px; color:var(--text-muted);">Calibrated μJy</span>
+      </div>
+
+      <div class="diag-row highlight-ch4">
+        <span class="mol-label">3.30 μm CH₄ METHANE:</span>
+        <span class="mol-val" id="diagCH4">0.14 μJy (DEEP)</span>
+      </div>
+      <div class="diag-row highlight-co2">
+        <span class="mol-label">4.26 μm CO₂ VOLATILE:</span>
+        <span class="mol-val" id="diagCO2">0.22 μJy (FLAT)</span>
+      </div>
+      <div class="diag-row highlight-thermal">
+        <span class="mol-label">4.80 μm THERMAL SLOPE:</span>
+        <span class="mol-val" id="diagThermal">0.31 μJy (COOL)</span>
+      </div>
+      <div class="diag-row">
+        <span class="mol-label">2.70 μm H₂O ABSORPTION:</span>
+        <span class="mol-val" id="diagH2O">Moderate</span>
+      </div>
+    </div>
+  </footer>
+
+</div>
+
+<!-- CSA NEOSSat Modal Drawer -->
+<div class="modal-backdrop" id="neossatModal">
+  <div class="neossat-modal-window">
+    <div class="modal-header">
+      <div class="modal-title-wrap">
+        <span class="badge-tag badge-csa">CSA NEOSSat</span>
+        <span style="font-family:var(--font-mono); font-size:13px; font-weight:700; color:#fff;">
+          Near-Earth Object Surveillance Satellite · CADC Optical Validation
+        </span>
+      </div>
+      <button class="modal-close-btn" id="btnCloseModal">×</button>
+    </div>
+
+    <div class="modal-content-grid">
+      <div class="tracking-strip-box">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <span style="font-family:var(--font-mono); font-size:11px; color:var(--text-bright); font-weight:600;">
+            High-Cadence Optical Tracking Strip (56-sec Interval)
+          </span>
+          <span style="font-family:var(--font-mono); font-size:10px; color:#ff6b6b;">15cm Maksutov Optical</span>
+        </div>
+        <div class="strip-canvas-wrap">
+          <canvas id="neossatCanvas"></canvas>
+        </div>
+        <div style="font-size:10px; color:var(--text-muted); font-family:var(--font-mono); display:flex; justify-content:space-between;">
+          <span>T0: 2025-06-14T02:18:04Z</span>
+          <span>T1: +56s</span>
+          <span>T2: +112s</span>
+          <span style="color:var(--accent-emerald);">Astrometric Streak Detected</span>
+        </div>
+      </div>
+
+      <div class="neossat-meta-table">
+        <div class="meta-row">
+          <span class="k">TARGET ID:</span>
+          <span class="v" id="neoTargID">NEOSSat-2025-XP4</span>
+        </div>
+        <div class="meta-row">
+          <span class="k">CADC DATASET:</span>
+          <span class="v">NEOS_L1B_0049182</span>
+        </div>
+        <div class="meta-row">
+          <span class="k">ORBIT CLASS:</span>
+          <span class="v" style="color:var(--accent-amber);" id="neoOrbitClass">Apollo Near-Earth</span>
+        </div>
+        <div class="meta-row">
+          <span class="k">APPARENT SPEED:</span>
+          <span class="v" id="neoSpeed">18.4″/hr</span>
+        </div>
+        <div class="meta-row">
+          <span class="k">MOID (EARTH):</span>
+          <span class="v">0.042 AU</span>
+        </div>
+        <div class="meta-row">
+          <span class="k">OPTICAL MAG (V):</span>
+          <span class="v" id="neoMag">17.8 mag</span>
+        </div>
+        <div class="meta-row">
+          <span class="k">IMPACT RISK:</span>
+          <span class="v" style="color:var(--accent-emerald);">Torino 0 (None)</span>
+        </div>
+        <div style="margin-top:12px; font-size:10px; color:var(--text-muted); line-height:1.4;">
+          Validated through Canadian Astronomy Data Centre (CADC) transient pipeline in cooperation with NASA Minor Planet Center (MPC).
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Floating Toast -->
+<div class="toast-notice" id="toastNotice">VO-Table JSON Exported Successfully</div>
+
+<script>
+/* ══════════════════════════════════════════════════════════════════════════════
+   SPHEREx ChronoSpectra — Scientific Engine & Visualization Logic
+   ══════════════════════════════════════════════════════════════════════════════ */
+
+// ── Physics Constants & Grid Setup ──
+const NUM_BANDS = 102;
+const LAMBDA_MIN = 0.75;
+const LAMBDA_MAX = 5.00;
+const SPHEREX_PIXEL_SCALE = 6.2; // arcsec / pixel
+
+function bandToWl(b) {
+  return LAMBDA_MIN + (b / (NUM_BANDS - 1)) * (LAMBDA_MAX - LAMBDA_MIN);
+}
+
+// ── Deterministic PRNG for Astronomical Repeatability ──
+class AstroRNG {
+  constructor(seed = 19840321) { this.s = seed | 0; }
+  next() {
+    this.s = (this.s + 0x6D2B79F5) | 0;
+    let t = Math.imul(this.s ^ (this.s >>> 15), 1 | this.s);
+    t = t + Math.imul(t ^ (t >>> 7), 61 | t) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  }
+  range(min, max) { return min + this.next() * (max - min); }
+}
+
+// ── 102-Band Near-Infrared Spectrum Synthesizer ──
+function synthesizePlanck(T, norm = 1.0) {
+  const spec = new Float32Array(NUM_BANDS);
+  const h = 6.626e-34, c = 2.998e8, k = 1.381e-23;
+  let maxVal = 0;
+  for (let i = 0; i < NUM_BANDS; i++) {
+    const lam = bandToWl(i) * 1e-6;
+    const exp = (h * c) / (lam * k * T);
+    const B = exp > 300 ? 0 : (2 * h * c * c) / (Math.pow(lam, 5) * (Math.exp(exp) - 1));
+    spec[i] = B;
+    if (B > maxVal) maxVal = B;
+  }
+  if (maxVal > 0) {
+    for (let i = 0; i < NUM_BANDS; i++) spec[i] = (spec[i] / maxVal) * norm;
+  }
+  return spec;
+}
+
+// ── Generate 4 Specialized Scientific Discovery Targets ──
+function createDiscoveryTargets() {
+  // Target 1: Ultra-Cool Y-Type Brown Dwarf
+  // Strong proper motion, undetected in Gaia DR3 (G > 21.5), deep CH4 absorption at 3.3 um
+  const bdSpec = new Float32Array(NUM_BANDS);
+  const bdBase = synthesizePlanck(450, 1.2);
+  for (let i = 0; i < NUM_BANDS; i++) {
+    const w = bandToWl(i);
+    let abs = 1.0;
+    // 3.3um Methane trough
+    abs *= (1.0 - 0.88 * Math.exp(-0.5 * Math.pow((w - 3.30) / 0.16, 2)));
+    // 2.7um Water trough
+    abs *= (1.0 - 0.70 * Math.exp(-0.5 * Math.pow((w - 2.70) / 0.18, 2)));
+    // 1.4um & 1.9um Water vapor
+    abs *= (1.0 - 0.45 * Math.exp(-0.5 * Math.pow((w - 1.40) / 0.10, 2)));
+    abs *= (1.0 - 0.40 * Math.exp(-0.5 * Math.pow((w - 1.90) / 0.12, 2)));
+    bdSpec[i] = bdBase[i] * Math.max(0.04, abs);
+  }
+
+  // Target 2: Near-Earth Asteroid (Apollo/Amor)
+  // Rapid linear displacement, thermal tail emission >4.0 um, optical streak in NEOSSat
+  const astSpec = new Float32Array(NUM_BANDS);
+  const astRefl = synthesizePlanck(5778, 0.35); // Reflected solar
+  const astTherm = synthesizePlanck(295, 1.6); // Warm surface thermal
+  for (let i = 0; i < NUM_BANDS; i++) {
+    const w = bandToWl(i);
+    const thermWeight = Math.max(0, (w - 3.2) / 1.8);
+    astSpec[i] = astRefl[i] * 0.4 + astTherm[i] * thermWeight;
+  }
+
+  // Target 3: Distant Oort Cloud Comet
+  // Extended fuzzy coma, massive 4.26 um CO2 emission line & 4.67 um CO emission
+  const cmtSpec = new Float32Array(NUM_BANDS);
+  const cmtCont = synthesizePlanck(210, 0.5);
+  for (let i = 0; i < NUM_BANDS; i++) {
+    const w = bandToWl(i);
+    cmtSpec[i] = cmtCont[i] * 0.3 + 
+      0.95 * Math.exp(-0.5 * Math.pow((w - 4.26) / 0.07, 2)) + // CO2 sharp line
+      0.65 * Math.exp(-0.5 * Math.pow((w - 4.67) / 0.09, 2)) + // CO emission
+      0.25 * Math.exp(-0.5 * Math.pow((w - 3.00) / 0.14, 2));   // Water ice
+  }
+
+  // Target 4: High-Proper-Motion Foreground Star (M-Dwarf)
+  // Noticeable shift, BUT PROMINENT in Gaia DR3 (The classic false-positive killer!)
+  const starSpec = synthesizePlanck(3400, 1.0);
+
+  return [
+    {
+      id: "SPX-J0600-6633",
+      name: "SPX-J0600-6633 (Y0 Dwarf)",
+      type: "browndwarf",
+      typeLabel: "Ultra-Cool Y Dwarf",
+      baseX: 380, baseY: 180,
+      dxEpoch: -4.5, dyEpoch: 5.5, // ~1.4 arcsec/yr
+      radius: 3.2,
+      spectrum: bdSpec,
+      gaiaMatch: null, // Invisible in Gaia!
+      pmTotal: "1,420 mas/yr",
+      tempEst: "~420 K (Sub-stellar)",
+      desc: "Spectacular ultra-cool brown dwarf discovery candidate. Zero optical counterpart in Gaia DR3, massive methane absorption dip at 3.3 μm."
+    },
+    {
+      id: "2025-XP4",
+      name: "2025 XP4 (Near-Earth Asteroid)",
+      type: "asteroid",
+      typeLabel: "Near-Earth Asteroid",
+      baseX: 160, baseY: 340,
+      dxEpoch: 18.0, dyEpoch: -8.0, // Fast solar system mover!
+      radius: 3.0,
+      spectrum: astSpec,
+      gaiaMatch: null, // Transient asteroid!
+      pmTotal: "22,800 mas/yr (High Velocity)",
+      tempEst: "~295 K (Solar Equilibrium)",
+      desc: "Fast moving solar system transient with bright thermal radiation >4.0 μm. Verified through CSA NEOSSat optical tracking."
+    },
+    {
+      id: "C/2025-X1",
+      name: "C/2025 X1 (SPHEREx-Comet)",
+      type: "comet",
+      typeLabel: "Oort Cloud Comet",
+      baseX: 120, baseY: 130,
+      dxEpoch: 7.0, dyEpoch: 4.0,
+      radius: 6.5, // Extended coma
+      isDiffuse: true,
+      spectrum: cmtSpec,
+      gaiaMatch: null,
+      pmTotal: "4,950 mas/yr",
+      tempEst: "~210 K (Outgassing Volatiles)",
+      desc: "Diffuse fuzzy coma structure showing unmistakable 4.26 μm CO₂ gas outgassing signature."
+    },
+    {
+      id: "GAIA-DR3-4108",
+      name: "Gaia DR3 4108429188 (M-Star)",
+      type: "star",
+      typeLabel: "High-PM Known Star",
+      baseX: 320, baseY: 360,
+      dxEpoch: 8.0, dyEpoch: -6.0,
+      radius: 4.0,
+      spectrum: starSpec,
+      gaiaMatch: {
+        sourceId: "41084291882949",
+        gMag: "12.4 mag",
+        bpRp: "+2.14",
+        parallax: "42.8 mas",
+        pmRA: "-480 mas/yr",
+        pmDec: "+610 mas/yr"
+      },
+      pmTotal: "776 mas/yr",
+      tempEst: "~3,400 K (M4V Photosphere)",
+      desc: "False-positive candidate: Moves across SPHEREx epochs, but immediately recognized as a cataloged optical star in Gaia DR3."
+    }
+  ];
+}
+
+// ── Synthetic Starfield Generator with Static Background ──
+function generateStarfield(count = 380) {
+  const rng = new AstroRNG(421985);
+  const stars = [];
+  for (let i = 0; i < count; i++) {
+    const x = rng.range(20, 492);
+    const y = rng.range(20, 492);
+    const mag = Math.pow(rng.next(), 3.5) * 0.9 + 0.05;
+    const T = rng.range(3000, 12000);
+    const isGaia = rng.next() < 0.65; // 65% of optical stars have Gaia DR3 records
+    
+    // Proper motion vector for known Gaia stars (mostly tiny background motion)
+    const pmRA = (rng.next() - 0.5) * 20; // mas/yr
+    const pmDec = (rng.next() - 0.5) * 20;
+
+    stars.push({
+      x, y, mag,
+      radius: 0.6 + mag * 3.2,
+      spectrum: synthesizePlanck(T, mag),
+      isGaia,
+      gaiaData: isGaia ? {
+        sourceId: `DR3-${1000000 + i * 491}`,
+        gMag: (11.0 + (1 - mag) * 9.5).toFixed(1) + " mag",
+        pmRA: pmRA.toFixed(1) + " mas/yr",
+        pmDec: pmDec.toFixed(1) + " mas/yr"
+      } : null
+    });
+  }
+  return stars;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   Central Application Controller Class
+   ══════════════════════════════════════════════════════════════════════════════ */
+class ChronoSpectraApp {
+  constructor() {
+    this.canvas = document.getElementById("skyCanvas");
+    this.ctx = this.canvas.getContext("2d", { willReadFrequently: true });
+    this.specCanvas = document.getElementById("spectrumChart");
+    this.specCtx = this.specCanvas.getContext("2d");
+    this.neossatCanvas = document.getElementById("neossatCanvas");
+    this.neossatCtx = this.neossatCanvas.getContext("2d");
+
+    // State
+    this.epoch = 0; // 0, 1, 2
+    this.isPlaying = true;
+    this.blinkRate = 2.5; // Hz
+    this.blinkTimer = null;
+    this.renderMode = "standard"; // standard | dipole | diff | invert
+    this.contrast = 1.2;
+    this.gaiaVectorsActive = true;
+    this.gaiaMaskActive = false;
+    this.selectedBand = 0; // 0 = all composite, 1..102 = band
+
+    // Viewport transform
+    this.zoom = 1.0;
+    this.panX = 0;
+    this.panY = 0;
+    this.isPanning = false;
+    this.lastMouse = { x: 0, y: 0 };
+
+    // Scientific Data
+    this.targets = createDiscoveryTargets();
+    this.stars = generateStarfield(350);
+    this.selectedTarget = this.targets[0]; // Default to Brown Dwarf
+
+    this.initCanvasSize();
+    this.bindEvents();
+    this.startBlinker();
+    this.updateTargetUI(this.selectedTarget);
+    this.drawSpectrumPlot();
+    this.drawSky();
+  }
+
+  initCanvasSize() {
+    const dpr = window.devicePixelRatio || 1;
+    const parent = this.canvas.parentElement;
+    this.w = parent.clientWidth;
+    this.h = parent.clientHeight;
+    this.canvas.width = this.w * dpr;
+    this.canvas.height = this.h * dpr;
+    this.canvas.style.width = this.w + "px";
+    this.canvas.style.height = this.h + "px";
+    this.ctx.scale(dpr, dpr);
+
+    // Spectrum canvas
+    const spParent = this.specCanvas.parentElement;
+    this.specCanvas.width = spParent.clientWidth * dpr;
+    this.specCanvas.height = spParent.clientHeight * dpr;
+    this.specCanvas.style.width = spParent.clientWidth + "px";
+    this.specCanvas.style.height = spParent.clientHeight + "px";
+    this.specCtx.scale(dpr, dpr);
+
+    // NEOSSat canvas
+    this.neossatCanvas.width = 460 * dpr;
+    this.neossatCanvas.height = 220 * dpr;
+    this.neossatCtx.scale(dpr, dpr);
+  }
+
+  // ── Blinking Animation Loop ──
+  startBlinker() {
+    if (this.blinkTimer) clearInterval(this.blinkTimer);
+    this.blinkTimer = setInterval(() => {
+      if (!this.isPlaying) return;
+      this.epoch = (this.epoch + 1) % 3;
+      this.syncEpochButtons();
+      this.drawSky();
+    }, 1000 / this.blinkRate);
+  }
+
+  syncEpochButtons() {
+    document.querySelectorAll(".epoch-btn[data-epoch]").forEach(b => {
+      b.classList.toggle("active", parseInt(b.dataset.epoch) === this.epoch);
+    });
+  }
+
+  // ── Sky Viewport Rendering Pipeline ──
+  drawSky() {
+    const ctx = this.ctx;
+    const w = this.w, h = this.h;
+
+    // Reset & Background
+    ctx.save();
+    ctx.fillStyle = this.renderMode === "invert" ? "#f2f4f8" : "#020408";
+    ctx.fillRect(0, 0, w, h);
+
+    // Apply Pan & Zoom
+    ctx.translate(w / 2 + this.panX, h / 2 + this.panY);
+    ctx.scale(this.zoom, this.zoom);
+    ctx.translate(-256, -256); // Center the 512x512 field
+
+    // Check Special Rendering Modes
+    if (this.renderMode === "dipole") {
+      this.renderDipoleOverlay(ctx);
+      ctx.restore();
+      return;
+    } else if (this.renderMode === "diff") {
+      this.renderDifferenceMap(ctx);
+      ctx.restore();
+      return;
+    }
+
+    // Normal or Inverted Render
+    this.renderStarfieldPass(ctx, this.epoch);
+
+    // Gaia DR3 Astrometric Overlay Pass
+    if (this.gaiaVectorsActive) {
+      this.renderGaiaOverlayPass(ctx);
+    }
+
+    // Reticle over currently selected target
+    this.renderTargetReticle(ctx);
+
+    ctx.restore();
+  }
+
+  // ── Render Pass: Static Stars + Moving Objects ──
+  renderStarfieldPass(ctx, epochIdx) {
+    const isInvert = this.renderMode === "invert";
+
+    // 1. Static Stars
+    for (const s of this.stars) {
+      // If Mask Known Gaia Stars is active, ghost them to 12% opacity!
+      if (this.gaiaMaskActive && s.isGaia) {
+        ctx.globalAlpha = 0.12;
+      } else {
+        ctx.globalAlpha = 1.0;
+      }
+
+      // Spectral Band Filter Slice
+      let flux = s.mag;
+      if (this.selectedBand > 0) {
+        flux *= (s.spectrum[this.selectedBand - 1] || 0.2);
+      }
+      flux *= this.contrast;
+
+      const r = Math.max(0.7, s.radius * Math.min(2.0, flux * 1.5));
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, r, 0, Math.PI * 2);
+      ctx.fillStyle = isInvert ? `rgba(15, 20, 30, ${Math.min(1, flux * 1.5)})` : `rgba(235, 245, 255, ${Math.min(1, flux * 1.4)})`;
+      ctx.fill();
+
+      // Soft glow on bright stars
+      if (r > 2.0) {
+        ctx.beginPath();
+        ctx.arc(s.x, s.y, r * 2.4, 0, Math.PI * 2);
+        ctx.fillStyle = isInvert ? "rgba(40,50,80,0.12)" : "rgba(100,160,255,0.15)";
+        ctx.fill();
+      }
+    }
+    ctx.globalAlpha = 1.0;
+
+    // 2. Discovery Targets
+    for (const t of this.targets) {
+      const curX = t.baseX + t.dxEpoch * epochIdx;
+      const curY = t.baseY + t.dyEpoch * epochIdx;
+
+      let flux = 1.0;
+      if (this.selectedBand > 0) {
+        flux = (t.spectrum[this.selectedBand - 1] || 0.1) * 1.8;
+      }
+      flux *= this.contrast;
+
+      if (t.isDiffuse) {
+        // Comet Coma (extended glow)
+        const comaR = t.radius * 2.2 * flux;
+        const grd = ctx.createRadialGradient(curX, curY, 0, curX, curY, comaR);
+        grd.addColorStop(0, isInvert ? "rgba(0,100,60,0.8)" : "rgba(0, 245, 155, 0.7)");
+        grd.addColorStop(0.5, isInvert ? "rgba(0,100,60,0.25)" : "rgba(0, 245, 155, 0.2)");
+        grd.addColorStop(1, "transparent");
+        ctx.fillStyle = grd;
+        ctx.beginPath();
+        ctx.arc(curX, curY, comaR, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // Point source core
+      const r = Math.max(1.2, t.radius * Math.min(2.5, flux));
+      ctx.beginPath();
+      ctx.arc(curX, curY, r, 0, Math.PI * 2);
+      ctx.fillStyle = isInvert ? "#080c14" : "#ffffff";
+      ctx.fill();
+
+      // Atmospheric / Thermal Tint
+      ctx.beginPath();
+      ctx.arc(curX, curY, r * 2.0, 0, Math.PI * 2);
+      if (t.type === "browndwarf") {
+        ctx.fillStyle = isInvert ? "rgba(180,0,50,0.2)" : "rgba(255, 51, 102, 0.35)";
+      } else if (t.type === "asteroid") {
+        ctx.fillStyle = isInvert ? "rgba(180,100,0,0.2)" : "rgba(255, 183, 3, 0.35)";
+      } else if (t.type === "comet") {
+        ctx.fillStyle = isInvert ? "rgba(0,150,80,0.2)" : "rgba(0, 245, 155, 0.35)";
+      } else {
+        ctx.fillStyle = "rgba(70, 140, 255, 0.3)";
+      }
+      ctx.fill();
+    }
+  }
+
+  // ── Red/Cyan Dipole Overlay Mode (Epoch 1=Red, Epoch 2=Cyan) ──
+  renderDipoleOverlay(ctx) {
+    // Stationary stars blend Red + Green + Blue = White
+    // Moving objects produce distinct separated Red and Cyan pairs!
+    for (const s of this.stars) {
+      if (this.gaiaMaskActive && s.isGaia) ctx.globalAlpha = 0.15;
+      else ctx.globalAlpha = 1.0;
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, s.radius * 1.1, 0, Math.PI * 2);
+      ctx.fillStyle = "#ffffff";
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1.0;
+
+    for (const t of this.targets) {
+      // Epoch 1: Red component
+      const x1 = t.baseX;
+      const y1 = t.baseY;
+      ctx.beginPath();
+      ctx.arc(x1, y1, t.radius * 1.5, 0, Math.PI * 2);
+      ctx.fillStyle = "rgba(255, 30, 80, 0.95)";
+      ctx.fill();
+
+      // Epoch 2: Cyan component (Epoch 2 shift)
+      const x2 = t.baseX + t.dxEpoch;
+      const y2 = t.baseY + t.dyEpoch;
+      ctx.beginPath();
+      ctx.arc(x2, y2, t.radius * 1.5, 0, Math.PI * 2);
+      ctx.fillStyle = "rgba(0, 240, 255, 0.95)";
+      ctx.fill();
+
+      // Trail line connecting dipole
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.3)";
+      ctx.lineWidth = 1;
+      ctx.setLineDash([2, 3]);
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(x2, y2);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+  }
+
+  // ── Difference Map Mode |E2 - E1| ──
+  renderDifferenceMap(ctx) {
+    ctx.fillStyle = "#020306";
+    ctx.fillRect(0, 0, 512, 512);
+
+    // Static stars subtract to black noise
+    for (const s of this.stars) {
+      ctx.fillStyle = "rgba(255,255,255,0.03)";
+      ctx.fillRect(s.x - 1, s.y - 1, 2, 2);
+    }
+
+    // Only moving sources leave unmistakable residuals!
+    for (const t of this.targets) {
+      const x1 = t.baseX, y1 = t.baseY;
+      const x2 = t.baseX + t.dxEpoch, y2 = t.baseY + t.dyEpoch;
+
+      // Negative residual (Epoch 1 flux deficit)
+      ctx.beginPath();
+      ctx.arc(x1, y1, t.radius * 1.8, 0, Math.PI * 2);
+      ctx.fillStyle = "rgba(30, 60, 140, 0.85)";
+      ctx.fill();
+
+      // Positive residual (Epoch 2 flux excess)
+      ctx.beginPath();
+      ctx.arc(x2, y2, t.radius * 1.8, 0, Math.PI * 2);
+      ctx.fillStyle = "rgba(0, 255, 150, 0.95)";
+      ctx.fill();
+    }
+  }
+
+  // ── Gaia DR3 Astrometry Vector Overlay ──
+  renderGaiaOverlayPass(ctx) {
+    // 1. Draw Gaia bounding circles and proper motion arrows on known stars
+    for (const s of this.stars) {
+      if (!s.isGaia) continue;
+      ctx.strokeStyle = "rgba(0, 240, 255, 0.35)";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, s.radius + 3, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+
+    // 2. High-PM known star gets prominent Gaia vector arrow!
+    const knownStar = this.targets.find(t => t.id === "GAIA-DR3-4108");
+    if (knownStar) {
+      const curX = knownStar.baseX + knownStar.dxEpoch * this.epoch;
+      const curY = knownStar.baseY + knownStar.dyEpoch * this.epoch;
+
+      // Cyan Gaia Target Box
+      ctx.strokeStyle = "#00f0ff";
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(curX - 8, curY - 8, 16, 16);
+
+      // Proper motion vector arrow (pointing along motion)
+      const arrowLen = 24;
+      const angle = Math.atan2(knownStar.dyEpoch, knownStar.dxEpoch);
+      const toX = curX + Math.cos(angle) * arrowLen;
+      const toY = curY + Math.sin(angle) * arrowLen;
+
+      ctx.beginPath();
+      ctx.moveTo(curX, curY);
+      ctx.lineTo(toX, toY);
+      ctx.strokeStyle = "#00f0ff";
+      ctx.stroke();
+
+      // Arrowhead
+      ctx.fillStyle = "#00f0ff";
+      ctx.beginPath();
+      ctx.arc(toX, toY, 2.5, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Label
+      ctx.font = "9px 'JetBrains Mono'";
+      ctx.fillStyle = "#00f0ff";
+      ctx.fillText("Gaia DR3 (776 mas/yr)", curX + 12, curY - 4);
+    }
+  }
+
+  // ── Target Reticle ──
+  renderTargetReticle(ctx) {
+    if (!this.selectedTarget) return;
+    const t = this.selectedTarget;
+    const curX = t.baseX + t.dxEpoch * this.epoch;
+    const curY = t.baseY + t.dyEpoch * this.epoch;
+
+    ctx.strokeStyle = "#00f0ff";
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([4, 4]);
+    ctx.beginPath();
+    ctx.arc(curX, curY, 14, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Crosshairs
+    ctx.strokeStyle = "rgba(0, 240, 255, 0.6)";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(curX - 20, curY); ctx.lineTo(curX - 15, curY);
+    ctx.moveTo(curX + 15, curY); ctx.lineTo(curX + 20, curY);
+    ctx.moveTo(curX, curY - 20); ctx.lineTo(curX, curY - 15);
+    ctx.moveTo(curX, curY + 15); ctx.lineTo(curX, curY + 20);
+    ctx.stroke();
+  }
+
+  // ── Spectrum Plotter (102-Band μJy Flux) ──
+  drawSpectrumPlot() {
+    const ctx = this.specCtx;
+    const canvas = this.specCanvas;
+    const dpr = window.devicePixelRatio || 1;
+    const w = canvas.width / dpr;
+    const h = canvas.height / dpr;
+
+    ctx.clearRect(0, 0, w, h);
+
+    const padL = 45, padR = 15, padT = 15, padB = 25;
+    const plotW = w - padL - padR;
+    const plotH = h - padT - padB;
+
+    // Grid lines
+    ctx.strokeStyle = "rgba(255,255,255,0.05)";
+    ctx.lineWidth = 0.5;
+    for (let i = 0; i <= 4; i++) {
+      const y = padT + (plotH / 4) * i;
+      ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(padL + plotW, y); ctx.stroke();
+    }
+    for (let wl = 1.0; wl <= 5.0; wl += 0.5) {
+      const x = padL + ((wl - LAMBDA_MIN) / (LAMBDA_MAX - LAMBDA_MIN)) * plotW;
+      ctx.beginPath(); ctx.moveTo(x, padT); ctx.lineTo(x, padT + plotH); ctx.stroke();
+
+      ctx.fillStyle = "rgba(255,255,255,0.3)";
+      ctx.font = "9px 'JetBrains Mono'";
+      ctx.textAlign = "center";
+      ctx.fillText(wl.toFixed(1) + "μm", x, h - 8);
+    }
+
+    // Diagnostic molecular band shaded highlights
+    const highlights = [
+      { wl: 3.30, label: "CH₄ Trough", color: "rgba(255, 51, 102, 0.2)" },
+      { wl: 4.26, label: "CO₂ Line", color: "rgba(0, 245, 155, 0.2)" },
+      { wl: 4.80, label: "Thermal Slope", color: "rgba(255, 183, 3, 0.2)" },
+      { wl: 2.70, label: "H₂O Ice", color: "rgba(0, 229, 255, 0.15)" }
+    ];
+    for (const hl of highlights) {
+      const hx = padL + ((hl.wl - LAMBDA_MIN) / (LAMBDA_MAX - LAMBDA_MIN)) * plotW;
+      ctx.fillStyle = hl.color;
+      ctx.fillRect(hx - 8, padT, 16, plotH);
+      ctx.fillStyle = "rgba(255,255,255,0.5)";
+      ctx.font = "8px 'JetBrains Mono'";
+      ctx.textAlign = "center";
+      ctx.fillText(hl.label, hx, padT + 10);
+    }
+
+    // Target Spectrum Trace
+    if (this.selectedTarget && this.selectedTarget.spectrum) {
+      const spec = this.selectedTarget.spectrum;
+      ctx.beginPath();
+      ctx.strokeStyle = "#00f0ff";
+      ctx.lineWidth = 1.8;
+      for (let i = 0; i < NUM_BANDS; i++) {
+        const x = padL + (i / (NUM_BANDS - 1)) * plotW;
+        const y = padT + plotH - (spec[i] * plotH * 0.85);
+        if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+
+      // Soft fill under curve
+      ctx.lineTo(padL + plotW, padT + plotH);
+      ctx.lineTo(padL, padT + plotH);
+      ctx.fillStyle = "rgba(0, 240, 255, 0.08)";
+      ctx.fill();
+    }
+
+    // Active Wavelength Indicator Line
+    if (this.selectedBand > 0) {
+      const curWl = bandToWl(this.selectedBand - 1);
+      const bx = padL + ((curWl - LAMBDA_MIN) / (LAMBDA_MAX - LAMBDA_MIN)) * plotW;
+      ctx.strokeStyle = "#ffb703";
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([3, 3]);
+      ctx.beginPath(); ctx.moveTo(bx, padT); ctx.lineTo(bx, padT + plotH); ctx.stroke();
+      ctx.setLineDash([]);
+
+      ctx.fillStyle = "#ffb703";
+      ctx.font = "9px 'JetBrains Mono'";
+      ctx.textAlign = "center";
+      ctx.fillText(`Band ${this.selectedBand}`, bx, padT + 22);
+    }
+
+    // Y-Axis labels
+    ctx.textAlign = "right";
+    ctx.fillStyle = "rgba(255,255,255,0.4)";
+    ctx.font = "9px 'JetBrains Mono'";
+    ctx.fillText("1.5 μJy", padL - 6, padT + 10);
+    ctx.fillText("0.7 μJy", padL - 6, padT + plotH / 2);
+    ctx.fillText("0.0 μJy", padL - 6, padT + plotH);
+  }
+
+  // ── CSA NEOSSat Tracking Strip Animation ──
+  drawNEOSSatTrackingStrip() {
+    const ctx = this.neossatCtx;
+    const w = 460, h = 220;
+    ctx.fillStyle = "#020306";
+    ctx.fillRect(0, 0, w, h);
+
+    // Optical Starfield in NEOSSat 15cm field
+    const rng = new AstroRNG(9921);
+    for (let i = 0; i < 45; i++) {
+      const sx = rng.range(10, w - 10);
+      const sy = rng.range(10, h - 10);
+      ctx.fillStyle = "rgba(255,255,255,0.7)";
+      ctx.beginPath();
+      ctx.arc(sx, sy, 0.8 + rng.next() * 1.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // If asteroid: Draw Rapid Optical Streak!
+    if (this.selectedTarget.type === "asteroid") {
+      const startX = 140, startY = 160;
+      const endX = 320, endY = 60;
+
+      // Asteroid streak
+      ctx.strokeStyle = "#ff4d6d";
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.moveTo(startX, startY);
+      ctx.lineTo(endX, endY);
+      ctx.stroke();
+
+      // Exposure points
+      [0.0, 0.5, 1.0].forEach((f, idx) => {
+        const px = startX + (endX - startX) * f;
+        const py = startY + (endY - startY) * f;
+        ctx.fillStyle = "#fff";
+        ctx.beginPath(); ctx.arc(px, py, 3.5, 0, Math.PI * 2); ctx.fill();
+
+        ctx.strokeStyle = "#00f0ff";
+        ctx.strokeRect(px - 7, py - 7, 14, 14);
+
+        ctx.font = "9px 'JetBrains Mono'";
+        ctx.fillStyle = "#00f0ff";
+        ctx.fillText(`T+${idx * 56}s`, px + 10, py - 4);
+      });
+
+      document.getElementById("neoTargID").textContent = "NEOSSat-2025-XP4";
+      document.getElementById("neoOrbitClass").textContent = "Apollo Near-Earth";
+      document.getElementById("neoSpeed").textContent = "18.4″/hr";
+      document.getElementById("neoMag").textContent = "17.8 V";
+    } else if (this.selectedTarget.type === "comet") {
+      // Fuzzy comet optical profile
+      const cx = 230, cy = 110;
+      const grd = ctx.createRadialGradient(cx, cy, 2, cx, cy, 32);
+      grd.addColorStop(0, "rgba(0, 245, 155, 0.8)");
+      grd.addColorStop(0.5, "rgba(0, 245, 155, 0.2)");
+      grd.addColorStop(1, "transparent");
+      ctx.fillStyle = grd;
+      ctx.beginPath(); ctx.arc(cx, cy, 32, 0, Math.PI * 2); ctx.fill();
+
+      document.getElementById("neoTargID").textContent = "C/2025 X1 (SPHEREx)";
+      document.getElementById("neoOrbitClass").textContent = "Hyperbolic Comet";
+      document.getElementById("neoSpeed").textContent = "4.2″/hr";
+      document.getElementById("neoMag").textContent = "18.5 V";
+    } else {
+      // Non-solar system source (e.g., Brown Dwarf or Star)
+      ctx.font = "11px 'JetBrains Mono'";
+      ctx.fillStyle = "rgba(255,255,255,0.4)";
+      ctx.textAlign = "center";
+      ctx.fillText("NO OPTICAL STREAK DETECTED (POINT SOURCE STANDARD)", w / 2, h / 2);
+
+      document.getElementById("neoTargID").textContent = this.selectedTarget.name;
+      document.getElementById("neoOrbitClass").textContent = "Non-Solar System";
+      document.getElementById("neoSpeed").textContent = "0.0″/hr";
+      document.getElementById("neoMag").textContent = "N/A (V > 21)";
+    }
+  }
+
+  // ── Synchronize Target Information Panel ──
+  updateTargetUI(t) {
+    this.selectedTarget = t;
+    const card = document.getElementById("targetCard");
+    card.className = `target-summary-card type-${t.type}`;
+
+    document.getElementById("targName").textContent = t.name;
+    document.getElementById("targBadge").textContent = t.typeLabel;
+    document.getElementById("targBadge").className = `target-badge ${t.type}`;
+    document.getElementById("targPM").textContent = t.pmTotal;
+    document.getElementById("targTemp").textContent = t.tempEst;
+
+    // Molecular readouts
+    const spec = t.spectrum;
+    const ch4Flux = spec ? spec[Math.round(NUM_BANDS * 0.58)].toFixed(2) : "0.00";
+    const co2Flux = spec ? spec[Math.round(NUM_BANDS * 0.82)].toFixed(2) : "0.00";
+    const thermFlux = spec ? spec[Math.round(NUM_BANDS * 0.94)].toFixed(2) : "0.00";
+
+    document.getElementById("diagCH4").textContent = `${ch4Flux} μJy (${t.type === 'browndwarf' ? 'DEEP ABSORPTION' : 'NORMAL'})`;
+    document.getElementById("diagCO2").textContent = `${co2Flux} μJy (${t.type === 'comet' ? 'STRONG EMISSION' : 'FLAT'})`;
+    document.getElementById("diagThermal").textContent = `${thermFlux} μJy (${t.type === 'asteroid' ? 'THERMAL EXCESS' : 'COOL'})`;
+
+    // Gaia detail box
+    const gaiaPill = document.getElementById("gaiaMatchPill");
+    const gaiaDesc = document.getElementById("gaiaMatchDesc");
+    if (t.gaiaMatch) {
+      gaiaPill.className = "status-pill matched";
+      gaiaPill.textContent = `MATCHED: GAIA DR3 ${t.gaiaMatch.sourceId}`;
+      gaiaDesc.textContent = `Known optical star. G=${t.gaiaMatch.gMag}, Parallax=${t.gaiaMatch.parallax}, μ=(${t.gaiaMatch.pmRA}, ${t.gaiaMatch.pmDec}). Flagged as known stellar background.`;
+      document.getElementById("targGaiaQuick").textContent = "Cataloged Star";
+    } else {
+      gaiaPill.className = "status-pill unmatched";
+      gaiaPill.textContent = "UNMATCHED IN GAIA DR3";
+      gaiaDesc.textContent = t.desc;
+      document.getElementById("targGaiaQuick").textContent = "No Optical Match (Discovery!)";
+    }
+
+    this.drawSpectrumPlot();
+    this.drawSky();
+  }
+
+  // ── Interaction Event Listeners ──
+  bindEvents() {
+    // 1. Blink Play/Pause & Steppers
+    document.getElementById("btnPlayPause").addEventListener("click", () => {
+      this.isPlaying = !this.isPlaying;
+      document.getElementById("btnPlayPause").textContent = this.isPlaying ? "❚❚" : "▶";
+    });
+
+    document.getElementById("btnStepPrev").addEventListener("click", () => {
+      this.isPlaying = false;
+      document.getElementById("btnPlayPause").textContent = "▶";
+      this.epoch = (this.epoch + 2) % 3;
+      this.syncEpochButtons();
+      this.drawSky();
+    });
+
+    document.getElementById("btnStepNext").addEventListener("click", () => {
+      this.isPlaying = false;
+      document.getElementById("btnPlayPause").textContent = "▶";
+      this.epoch = (this.epoch + 1) % 3;
+      this.syncEpochButtons();
+      this.drawSky();
+    });
+
+    document.querySelectorAll(".epoch-btn[data-epoch]").forEach(b => {
+      b.addEventListener("click", () => {
+        this.isPlaying = false;
+        document.getElementById("btnPlayPause").textContent = "▶";
+        this.epoch = parseInt(b.dataset.epoch);
+        this.syncEpochButtons();
+        this.drawSky();
+      });
+    });
+
+    // 2. Blink Rate Slider
+    document.getElementById("blinkRateSlider").addEventListener("input", (e) => {
+      this.blinkRate = parseFloat(e.target.value);
+      document.getElementById("blinkRateVal").textContent = this.blinkRate.toFixed(1) + " Hz";
+      this.startBlinker();
+    });
+
+    // 3. Render Modes (Composite, Dipole, Difference, Invert)
+    document.querySelectorAll(".mode-toggle").forEach(btn => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll(".mode-toggle").forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+        this.renderMode = btn.dataset.mode;
+        this.drawSky();
+      });
+    });
+
+    // 4. Contrast & ZScale
+    document.getElementById("contrastSlider").addEventListener("input", (e) => {
+      this.contrast = parseFloat(e.target.value);
+      this.drawSky();
+    });
+
+    document.getElementById("btnZScale").addEventListener("click", () => {
+      this.contrast = 1.45;
+      document.getElementById("contrastSlider").value = 1.45;
+      this.showToast("Applied IRSA ZScale Stretch");
+      this.drawSky();
+    });
+
+    // 5. Gaia DR3 Proper Motion Toggle
+    document.getElementById("btnToggleGaiaVectors").addEventListener("click", (e) => {
+      const el = e.currentTarget;
+      this.gaiaVectorsActive = !this.gaiaVectorsActive;
+      el.classList.toggle("active", this.gaiaVectorsActive);
+      this.drawSky();
+    });
+
+    // 6. Mask Known Gaia Stars (The False-Positive Killer!)
+    document.getElementById("btnToggleGaiaMask").addEventListener("click", (e) => {
+      const el = e.currentTarget;
+      this.gaiaMaskActive = !this.gaiaMaskActive;
+      el.classList.toggle("active", this.gaiaMaskActive);
+      this.showToast(this.gaiaMaskActive ? "Masking Gaia Stars — Infrared Movers Isolated!" : "Gaia Star Mask Removed");
+      this.drawSky();
+    });
+
+    // 7. 102-Band Wavelength Slider & Presets
+    const bandSlider = document.getElementById("bandSlider");
+    bandSlider.addEventListener("input", (e) => {
+      this.selectedBand = parseInt(e.target.value);
+      if (this.selectedBand === 0) {
+        document.getElementById("bandNumberLabel").textContent = "ALL";
+        document.getElementById("currentWavelength").textContent = "λ = All Bands";
+        document.getElementById("hudBandName").textContent = "RGB Full Composite";
+      } else {
+        const wl = bandToWl(this.selectedBand - 1);
+        document.getElementById("bandNumberLabel").textContent = this.selectedBand;
+        document.getElementById("currentWavelength").textContent = `λ = ${wl.toFixed(2)} μm`;
+        document.getElementById("hudBandName").textContent = `SPHEREx Band ${this.selectedBand} (${wl.toFixed(2)}μm)`;
+      }
+      this.drawSky();
+      this.drawSpectrumPlot();
+    });
+
+    document.querySelectorAll(".preset-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll(".preset-btn").forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+        const p = btn.dataset.preset;
+        if (p === "all") bandSlider.value = 0;
+        else if (p === "methane") bandSlider.value = 60; // 3.3um
+        else if (p === "comet") bandSlider.value = 83; // 4.26um
+        else if (p === "thermal") bandSlider.value = 97; // 4.8um
+        bandSlider.dispatchEvent(new Event("input"));
+      });
+    });
+
+    // 8. Pan & Zoom Canvas Interactions
+    this.canvas.addEventListener("mousedown", (e) => {
+      this.isPanning = true;
+      this.lastMouse = { x: e.clientX, y: e.clientY };
+    });
+
+    window.addEventListener("mousemove", (e) => {
+      if (!this.isPanning) return;
+      this.panX += e.clientX - this.lastMouse.x;
+      this.panY += e.clientY - this.lastMouse.y;
+      this.lastMouse = { x: e.clientX, y: e.clientY };
+      this.drawSky();
+    });
+
+    window.addEventListener("mouseup", () => { this.isPanning = false; });
+
+    this.canvas.addEventListener("wheel", (e) => {
+      e.preventDefault();
+      const zoomFactor = e.deltaY < 0 ? 1.15 : 0.87;
+      this.zoom = Math.max(0.6, Math.min(6.0, this.zoom * zoomFactor));
+      this.drawSky();
+    }, { passive: false });
+
+    // 9. Canvas Click Detection to Select Target
+    this.canvas.addEventListener("click", (e) => {
+      const rect = this.canvas.getBoundingClientRect();
+      const clickX = e.clientX - rect.left;
+      const clickY = e.clientY - rect.top;
+
+      // Unproject mouse coordinates into starfield space
+      const worldX = (clickX - (this.w / 2 + this.panX)) / this.zoom + 256;
+      const worldY = (clickY - (this.h / 2 + this.panY)) / this.zoom + 256;
+
+      // Find nearest target within threshold
+      let nearest = null;
+      let minDist = 22;
+      for (const t of this.targets) {
+        const curX = t.baseX + t.dxEpoch * this.epoch;
+        const curY = t.baseY + t.dyEpoch * this.epoch;
+        const d = Math.hypot(worldX - curX, worldY - curY);
+        if (d < minDist) {
+          minDist = d;
+          nearest = t;
+        }
+      }
+      if (nearest) {
+        this.updateTargetUI(nearest);
+      }
+    });
+
+    // 10. CSA NEOSSat Modal Drawer
+    const modal = document.getElementById("neossatModal");
+    document.getElementById("btnQueryNEOSSat").addEventListener("click", () => {
+      modal.classList.add("open");
+      this.drawNEOSSatTrackingStrip();
+    });
+    document.getElementById("btnCloseModal").addEventListener("click", () => {
+      modal.classList.remove("open");
+    });
+    modal.addEventListener("click", (e) => {
+      if (e.target === modal) modal.classList.remove("open");
+    });
+
+    // 11. Reset View
+    document.getElementById("btnResetView").addEventListener("click", () => {
+      this.zoom = 1.0;
+      this.panX = 0;
+      this.panY = 0;
+      this.drawSky();
+      this.showToast("Centered Field of View");
+    });
+
+    // 12. Export VO-Table JSON
+    document.getElementById("btnExportCatalog").addEventListener("click", () => {
+      const data = {
+        mission: "NASA SPHEREx / CSA NEOSSat / ESA Gaia DR3",
+        field: "Ecliptic Pole South",
+        pixel_scale_arcsec: SPHEREX_PIXEL_SCALE,
+        bands: NUM_BANDS,
+        targets: this.targets.map(t => ({
+          name: t.name,
+          type: t.type,
+          pm: t.pmTotal,
+          gaia_match: t.gaiaMatch ? t.gaiaMatch.sourceId : null,
+          flux_3_3um: t.spectrum[60],
+          flux_4_26um: t.spectrum[83]
+        }))
+      };
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "SPHEREx_ChronoSpectra_Catalog.json";
+      a.click();
+      URL.revokeObjectURL(url);
+      this.showToast("Catalog Downloaded: SPHEREx_ChronoSpectra_Catalog.json");
+    });
+
+    // 13. Keyboard Shortcuts (Space for blink toggle, arrows for epoch)
+    window.addEventListener("keydown", (e) => {
+      if (e.code === "Space") {
+        e.preventDefault();
+        document.getElementById("btnPlayPause").click();
+      } else if (e.code === "ArrowLeft") {
+        document.getElementById("btnStepPrev").click();
+      } else if (e.code === "ArrowRight") {
+        document.getElementById("btnStepNext").click();
+      }
+    });
+
+    // 14. Citizen Science Voting
+    document.querySelectorAll(".btn-vote").forEach(btn => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll(".btn-vote").forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+        this.showToast(`Logged Citizen Science Classification: ${btn.textContent}`);
+      });
+    });
+
+    // Resize Handler
+    window.addEventListener("resize", () => {
+      this.initCanvasSize();
+      this.drawSky();
+      this.drawSpectrumPlot();
+    });
+  }
+
+  showToast(msg) {
+    const t = document.getElementById("toastNotice");
+    t.textContent = msg;
+    t.classList.add("show");
+    setTimeout(() => t.classList.remove("show"), 2600);
+  }
+}
+
+// ── Launch on DOM Ready ──
+window.addEventListener("DOMContentLoaded", () => {
+  new ChronoSpectraApp();
+});
+</script>
+</body>
+</html>
+
