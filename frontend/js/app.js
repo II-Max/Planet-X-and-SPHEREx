@@ -6,7 +6,7 @@
 
 // ── 1. Cấu hình & Dữ liệu Thiên văn Mặc định (Đảm bảo không bao giờ trắng trang) ──
 const CONFIG = {
-  DEFAULT_RTDB_URL: "https://aboutme-iimax-default-rtdb.asia-southeast1.firebasedatabase.app",
+  DEFAULT_RTDB_URL: "https://nasasspherex-default-rtdb.asia-southeast1.firebasedatabase.app",
   LAMBDA_MIN: 0.75,
   LAMBDA_MAX: 5.00
 };

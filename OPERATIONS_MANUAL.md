@@ -3,7 +3,7 @@
 **Dự án:** NASA SPHEREx Citizen Science Platform — Multi-Mission Transient Explorer  
 **Giao diện:** Dark Mode Design - Gray (Tinh giản cho người dùng phổ thông)  
 **Kiến trúc:** 2 Phân Hệ (Python Backend ETL -> Firebase Realtime DB -> Firebase Hosting Frontend)  
-**Website Trực Tuyến:** 🌐 **[https://aboutme-iimax.web.app](https://aboutme-iimax.web.app)**
+**Website Trực Tuyến:** 🌐 **[https://nasasspherex.web.app](https://nasasspherex.web.app)**
 
 ---
 
@@ -11,8 +11,8 @@
 
 | Thành Phần | Địa Chỉ Trực Tuyến / Endpoint | Trạng Thái |
 |---|---|---|
-| **Website Khám Phá (Frontend)** | 🌐 **[https://aboutme-iimax.web.app](https://aboutme-iimax.web.app)** | ✅ Đã triển khai (Live CDN) |
-| **Firebase Realtime Database** | 📡 **`https://aboutme-iimax-default-rtdb.asia-southeast1.firebasedatabase.app`** | ✅ Đang đồng bộ thời gian thực |
+| **Website Khám Phá (Frontend)** | 🌐 **[https://nasasspherex.web.app](https://nasasspherex.web.app)** | ✅ Đã triển khai (Live CDN) |
+| **Firebase Realtime Database** | 📡 **`https://nasasspherex-default-rtdb.asia-southeast1.firebasedatabase.app`** | ✅ Đang đồng bộ thời gian thực |
 | **Nhánh dữ liệu chính** | `/spherex` (Metadata, Stars, Candidates, NEOSSat) | ✅ Rules mở đọc công cộng |
 
 ---
@@ -35,7 +35,7 @@
                                     ▼
 ┌────────────────────────────────────────────────────────────────────────┐
 │                   FIREBASE REALTIME DATABASE (CLOUD)                   │
-│         https://aboutme-iimax-default-rtdb.asia-southeast1...          │
+│         https://nasasspherex-default-rtdb.asia-southeast1...          │
 └───────────────────────────────────┬────────────────────────────────────┘
                                     │
                           WebSocket / EventStream
@@ -44,7 +44,7 @@
 ┌────────────────────────────────────────────────────────────────────────┐
 │                  PHÂN HỆ 2: FRONTEND (HTML / CSS / JS)                 │
 │                                                                        │
-│   • Triển khai trên Firebase Hosting: https://aboutme-iimax.web.app    │
+│   • Triển khai trên Firebase Hosting: https://nasasspherex.web.app     │
 │   • Phong cách Dark Mode Design - Gray tinh giản cho người phổ thông   │
 │   • Lắng nghe realtime từ Firebase DB (db.ref('spherex').on('value')) │
 │   • Không bao giờ bị màn hình trắng (cơ chế Zero-Failure Fallback)     │
@@ -95,7 +95,7 @@ python run_backend.py --push
 
 ### 4.4 Tùy biến tham số vùng trời hoặc URL Firebase
 ```bash
-python run_backend.py --ra 90.0 --dec -66.5606 --firebase-url "https://aboutme-iimax-default-rtdb.asia-southeast1.firebasedatabase.app"
+python run_backend.py --ra 90.0 --dec -66.5606 --firebase-url "https://nasasspherex-default-rtdb.asia-southeast1.firebasedatabase.app"
 ```
 
 ---
@@ -104,7 +104,7 @@ python run_backend.py --ra 90.0 --dec -66.5606 --firebase-url "https://aboutme-i
 
 ### 5.1 Trải nghiệm trực tuyến qua Firebase Hosting
 Website đã được triển khai hoàn tất trên CDN toàn cầu của Firebase:
-🌐 **[https://aboutme-iimax.web.app](https://aboutme-iimax.web.app)**
+🌐 **[https://nasasspherex.web.app](https://nasasspherex.web.app)**
 
 ### 5.2 Mở trực tiếp trên máy tính cá nhân (Offline / Local)
 Bạn có thể mở tệp bất kỳ lúc nào mà **không gặp lỗi màn hình trắng**:
@@ -128,7 +128,7 @@ python -m http.server 8080 --directory frontend
 
 Dự án đã có sẵn các tệp cấu hình chuẩn:
 - `firebase.json`: Định tuyến Firebase Hosting tới thư mục `frontend` và trỏ quy tắc cơ sở dữ liệu `database.rules.json`.
-- `.firebaserc`: Định danh dự án Firebase mặc định (`aboutme-iimax`).
+- `.firebaserc`: Định danh dự án Firebase mặc định (`nasasspherex`).
 - `database.rules.json`: Cấu hình mở quyền đọc cho cộng đồng khoa học công dân và ghi cho backend.
 
 ### Lệnh triển khai nhanh:

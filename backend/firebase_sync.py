@@ -40,8 +40,8 @@ logging.basicConfig(
 )
 logger = logging.getLogger("SPHEREx-FirebaseSync")
 
-# Cấu hình Firebase mặc định (Instance đã kiểm chứng hoạt động)
-DEFAULT_FIREBASE_RTDB_URL = "https://aboutme-iimax-default-rtdb.asia-southeast1.firebasedatabase.app"
+# Cấu hình Firebase mặc định (Project nasasspherex)
+DEFAULT_FIREBASE_RTDB_URL = "https://nasasspherex-default-rtdb.asia-southeast1.firebasedatabase.app"
 DATA_CACHE_DIR = root_dir / "backend" / "data"
 CACHE_FILE = DATA_CACHE_DIR / "spherex_synced_data.json"
 

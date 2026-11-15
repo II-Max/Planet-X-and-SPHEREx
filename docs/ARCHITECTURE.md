@@ -32,8 +32,8 @@ flowchart TD
     end
 
     subgraph CLOUD["Nền Tảng Đám Mây Firebase (Cloud Infrastructure)"]
-        RTDB["Firebase Realtime Database<br/>/spherex (JSON Tree)<br/>https://aboutme-iimax-default-rtdb..."]
-        HOSTING["Firebase Hosting<br/>Global CDN Web App<br/>https://aboutme-iimax.web.app"]
+        RTDB["Firebase Realtime Database<br/>/spherex (JSON Tree)<br/>https://nasasspherex-default-rtdb..."]
+        HOSTING["Firebase Hosting<br/>Global CDN Web App<br/>https://nasasspherex.web.app"]
     end
 
     subgraph FRONTEND["Phân Hệ 2: Frontend Khám Phá (Dark Mode Gray - Tinh Giản)"]
@@ -78,7 +78,7 @@ c:\Users\Phamv\OneDrive\Desktop\Planet X and SPHEREx\
 │
 ├── run_backend.py                       # [ĐIỀU KHIỂN CHÍNH] Chạy Tính năng 1 (Tải về) & Tính năng 2 (Đẩy Firebase)
 ├── firebase.json                        # Cấu hình Firebase Hosting & Realtime Database Rules
-├── .firebaserc                          # Cấu hình dự án Firebase mặc định (aboutme-iimax)
+├── .firebaserc                          # Cấu hình dự án Firebase mặc định (nasasspherex)
 ├── database.rules.json                  # Quy tắc bảo mật Realtime Database
 ├── requirements.txt                     # Danh mục thư viện Python (astropy, firebase-admin, requests, etc.)
 ├── index.html                           # Cổng điều hướng chính cho root workspace
@@ -137,9 +137,9 @@ c:\Users\Phamv\OneDrive\Desktop\Planet X and SPHEREx\
 ## 4. Địa Chỉ Trực Tuyến & Kiểm Thử
 
 - 🌐 **Website trải nghiệm trực tiếp (Firebase Hosting)**:  
-  **[https://aboutme-iimax.web.app](https://aboutme-iimax.web.app)**
+  **[https://nasasspherex.web.app](https://nasasspherex.web.app)**
 - 📡 **Firebase Realtime Database Endpoint**:  
-  **`https://aboutme-iimax-default-rtdb.asia-southeast1.firebasedatabase.app`**
+  **`https://nasasspherex-default-rtdb.asia-southeast1.firebasedatabase.app`**
 - 🧪 **Kiểm thử tự động**:
   ```bash
   pytest backend/tests/test_pipeline.py -v

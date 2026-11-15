@@ -4,11 +4,11 @@
 ---
 
 ### 🌐 TRẢI NGHIỆM TRỰC TUYẾN NGAY TẠI ĐÂY:
-> 👉 **Website chính thức (Firebase Hosting):** **[https://aboutme-iimax.web.app](https://aboutme-iimax.web.app)**  
-> 📡 **Firebase Realtime Database Endpoint:** **`https://aboutme-iimax-default-rtdb.asia-southeast1.firebasedatabase.app`**
+> 👉 **Website chính thức (Firebase Hosting):** **[https://nasasspherex.web.app](https://nasasspherex.web.app)**  
+> 📡 **Firebase Realtime Database Endpoint:** **`https://nasasspherex-default-rtdb.asia-southeast1.firebasedatabase.app`**
 
-[![Firebase Hosting](https://img.shields.io/badge/Firebase_Hosting-Live_Website-f5820d.svg?style=for-the-badge&logo=firebase)](https://aboutme-iimax.web.app)
-[![Firebase RTDB](https://img.shields.io/badge/Firebase_RTDB-Realtime_Sync-ffca28.svg?style=for-the-badge&logo=firebase)](https://aboutme-iimax-default-rtdb.asia-southeast1.firebasedatabase.app)
+[![Firebase Hosting](https://img.shields.io/badge/Firebase_Hosting-Live_Website-f5820d.svg?style=for-the-badge&logo=firebase)](https://nasasspherex.web.app)
+[![Firebase RTDB](https://img.shields.io/badge/Firebase_RTDB-Realtime_Sync-ffca28.svg?style=for-the-badge&logo=firebase)](https://nasasspherex-default-rtdb.asia-southeast1.firebasedatabase.app)
 [![NASA SPHEREx](https://img.shields.io/badge/NASA-SPHEREx_Mission-0b3d91.svg?style=for-the-badge&logo=nasa)](https://spherex.caltech.edu/)
 [![ESA Gaia DR3](https://img.shields.io/badge/ESA-Gaia_DR3-2b2d42.svg?style=for-the-badge)](https://www.cosmos.esa.int/web/gaia/dr3)
 [![CSA NEOSSat](https://img.shields.io/badge/CSA-NEOSSat_CADC-d90429.svg?style=for-the-badge)](https://www.asc-csa.gc.ca/eng/satellites/neossat/)
@@ -47,7 +47,7 @@
                                     ▼
 ┌────────────────────────────────────────────────────────────────────────┐
 │                   FIREBASE REALTIME DATABASE (CLOUD)                   │
-│         https://aboutme-iimax-default-rtdb.asia-southeast1...          │
+│         https://nasasspherex-default-rtdb.asia-southeast1...          │
 └───────────────────────────────────┬────────────────────────────────────┘
                                     │
                           WebSocket / EventStream
@@ -56,7 +56,7 @@
 ┌────────────────────────────────────────────────────────────────────────┐
 │                  PHÂN HỆ 2: FRONTEND (HTML / CSS / JS)                 │
 │                                                                        │
-│   • Triển khai trên Firebase Hosting: https://aboutme-iimax.web.app    │
+│   • Triển khai trên Firebase Hosting: https://nasasspherex.web.app     │
 │   • Phong cách Dark Mode Design - Gray tinh giản cho người phổ thông   │
 │   • Lắng nghe realtime từ Firebase DB (db.ref('spherex').on('value')) │
 │   • Không bao giờ bị màn hình trắng (cơ chế Zero-Failure Fallback)     │
@@ -68,7 +68,7 @@
    - **Tính năng 1: Tải dữ liệu về & Xử lý**: Truy vấn hoặc giả lập khối phổ đa thời kỳ SPHEREx (Epoch 2025.0, 2025.5, 2026.0), tính toán lan truyền chuyển động riêng Gaia DR3 qua 9 năm, tích hợp vệt quỹ đạo NEOSSat; chạy thuật toán khử nền sigma-clipping, trừ ảnh dipole $E_2 - E_1$, trích xuất 102 băng phổ SED.
    - **Tính năng 2: Đẩy lên Realtime Database ở Firebase**: Tự động đóng gói và đẩy dữ liệu lên Firebase Realtime Database nhánh `/spherex` với độ trễ dưới 1 giây.
 2. **Phân Hệ Frontend (HTML/JS trên Firebase)**:
-   - Triển khai toàn cầu trên **Firebase Hosting**: [https://aboutme-iimax.web.app](https://aboutme-iimax.web.app).
+   - Triển khai toàn cầu trên **Firebase Hosting**: [https://nasasspherex.web.app](https://nasasspherex.web.app).
    - Tự động cập nhật thời gian thực khi Backend đẩy dữ liệu mới mà không cần F5 tải lại trang.
 
 ---
@@ -80,7 +80,7 @@ c:\Users\Phamv\OneDrive\Desktop\Planet X and SPHEREx\
 │
 ├── run_backend.py                       # [ĐIỀU KHIỂN CHÍNH] Chạy Tính năng 1 (Tải về) & Tính năng 2 (Đẩy Firebase)
 ├── firebase.json                        # Cấu hình Firebase Hosting & Realtime Database Rules
-├── .firebaserc                          # Cấu hình dự án Firebase mặc định (aboutme-iimax)
+├── .firebaserc                          # Cấu hình dự án Firebase mặc định (nasasspherex)
 ├── database.rules.json                  # Quy tắc bảo mật Realtime Database
 ├── requirements.txt                     # Danh mục thư viện Python (astropy, firebase-admin, requests, etc.)
 ├── index.html                           # Cổng điều hướng chính cho root workspace
@@ -134,7 +134,7 @@ python run_backend.py --download-and-push
 - ✓ TÍNH NĂNG 2 HOÀN THÀNH: Đẩy dữ liệu lên Firebase RTDB với trạng thái `HTTP 200 OK`.
 
 ### Bước 3: Trải Nghiệm Giao Diện
-- **Cách 1 (Khuyên dùng - Trực tuyến)**: Truy cập ngay 👉 **[https://aboutme-iimax.web.app](https://aboutme-iimax.web.app)**
+- **Cách 1 (Khuyên dùng - Trực tuyến)**: Truy cập ngay 👉 **[https://nasasspherex.web.app](https://nasasspherex.web.app)**
 - **Cách 2 (Mở tệp cục bộ)**: Nhấp đúp mở [`index.html`](index.html) hoặc [`frontend/index.html`](frontend/index.html) bằng Chrome hoặc Edge.
 
 ---
