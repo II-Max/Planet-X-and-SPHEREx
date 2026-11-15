@@ -1,46 +1,104 @@
-/* frontend/css/layout.css - Grid System & Workspace Containers */
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+/* frontend/css/layout.css - Clean, Responsive 2-Column Minimalist Layout */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
 
 html, body {
   width: 100vw;
   height: 100vh;
   overflow: hidden;
   background-color: var(--bg-deep);
-  color: var(--text-main);
+  color: var(--text-primary);
   font-family: var(--font-sans);
-  font-size: 13px;
-  line-height: 1.4;
-  user-select: none;
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
 }
 
 #app {
   display: grid;
-  grid-template-rows: 52px 1fr 230px;
-  grid-template-columns: 1fr 400px;
+  grid-template-rows: 56px 1fr;
   width: 100vw;
   height: 100vh;
   overflow: hidden;
+  background-color: var(--bg-deep);
 }
 
-/* Header */
+/* ── 1. Top Navigation Bar (Header) ── */
 .app-header {
-  grid-column: 1 / -1;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 16px;
-  background: linear-gradient(180deg, rgba(16, 25, 48, 0.98), rgba(10, 15, 30, 0.95));
+  padding: 0 24px;
+  background-color: var(--bg-surface);
   border-bottom: 1px solid var(--border-subtle);
-  z-index: 50;
+  z-index: 20;
 }
 
-/* Central Sky Viewport */
-.viewport-container {
-  position: relative;
-  background-color: #020408;
+.brand-container {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.brand-logo-badge {
+  background-color: #1e293b;
+  color: #60a5fa;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(96, 165, 250, 0.2);
+}
+
+.brand-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-white);
+  letter-spacing: -0.2px;
+}
+
+.brand-title span {
+  color: var(--text-secondary);
+  font-weight: 400;
+}
+
+.header-status-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* ── 2. Main Content Grid (Canvas Stage & Sidebar) ── */
+.main-content {
+  display: grid;
+  grid-template-columns: 1fr 390px;
+  width: 100%;
+  height: 100%;
   overflow: hidden;
+}
+
+/* Left: Interactive Sky Stage */
+.stage-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background-color: var(--bg-deep);
   border-right: 1px solid var(--border-subtle);
-  border-bottom: 1px solid var(--border-subtle);
+  position: relative;
+  overflow: hidden;
+}
+
+.canvas-wrapper {
+  flex: 1;
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background-color: #08090c;
+  overflow: hidden;
 }
 
 #skyCanvas {
@@ -52,27 +110,46 @@ html, body {
   cursor: crosshair;
 }
 
-/* Right Inspector Panel */
-.right-inspector {
-  grid-column: 2;
-  grid-row: 2;
-  background: var(--bg-surface);
-  border-bottom: 1px solid var(--border-subtle);
-  overflow-y: auto;
+/* Bottom Control Deck */
+.control-deck {
+  background-color: var(--bg-surface);
+  border-top: 1px solid var(--border-subtle);
+  padding: 14px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  z-index: 10;
+}
+
+/* Right: Discovery Inspector Panel */
+.sidebar-panel {
   display: flex;
   flex-direction: column;
+  height: 100%;
+  background-color: var(--bg-surface);
+  overflow-y: auto;
+  border-left: 1px solid var(--border-subtle);
 }
 
-/* Bottom Spectral Dock */
-.spectral-explorer-dock {
-  grid-column: 1 / -1;
-  grid-row: 3;
+.sidebar-scroll-content {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* Scrollbar Styling */
+.sidebar-panel::-webkit-scrollbar {
+  width: 6px;
+}
+.sidebar-panel::-webkit-scrollbar-track {
   background: var(--bg-surface);
-  border-top: 1px solid var(--border-subtle);
-  display: grid;
-  grid-template-columns: 320px 1fr 280px;
-  padding: 10px 16px;
-  gap: 16px;
-  z-index: 30;
 }
-
+.sidebar-panel::-webkit-scrollbar-thumb {
+  background: #2a303c;
+  border-radius: 3px;
+}
+.sidebar-panel::-webkit-scrollbar-thumb:hover {
+  background: #374151;
+}

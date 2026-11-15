@@ -1,179 +1,156 @@
-# Sổ Tay Vận Hành Dự Án: SPHEREx ChronoSpectra
+# Sổ Tay Vận Hành Dự Án: SPHEREx Explorer (Firebase Edition)
 **Tệp định danh:** `OPERATIONS_MANUAL.md`  
 **Dự án:** NASA SPHEREx Citizen Science Platform — Multi-Mission Transient Explorer  
-**Phiên bản:** v2.4-Production
+**Giao diện:** Dark Mode Design - Gray (Tinh giản cho người dùng phổ thông)  
+**Kiến trúc:** 2 Phân Hệ (Python Backend ETL -> Firebase Realtime DB -> Firebase Hosting Frontend)  
+**Website Trực Tuyến:** 🌐 **[https://aboutme-iimax.web.app](https://aboutme-iimax.web.app)**
 
 ---
 
-## 1. Yêu Cầu Môi Trường (System Prerequisites)
+## 1. Địa Chỉ Trực Tuyến & Trạng Thái Hệ Thống
 
-| Thành phần | Yêu cầu tối thiểu | Khuyến nghị | Ghi chú |
-|---|---|---|---|
-| **Hệ điều hành** | Windows 10/11, macOS 12+, Ubuntu 20.04+ | Windows 11 / Linux | Đã kiểm thử tương thích đa nền tảng |
-| **Python** | Python 3.10+ | Python 3.11 hoặc 3.14 | Cần thiết để chạy backend xử lý dữ liệu thiên văn |
-| **Trình quản lý gói** | `pip` tiêu chuẩn | `uv` (Astral) | `uv` giúp cài đặt thư viện và chạy script cực nhanh (dưới 1 giây) |
-| **Trình duyệt Web** | Chrome 100+, Edge 100+, Firefox 90+, Safari 15+ | Google Chrome / Microsoft Edge | Hỗ trợ chuẩn HTML5 Canvas 2D & WebGL |
+| Thành Phần | Địa Chỉ Trực Tuyến / Endpoint | Trạng Thái |
+|---|---|---|
+| **Website Khám Phá (Frontend)** | 🌐 **[https://aboutme-iimax.web.app](https://aboutme-iimax.web.app)** | ✅ Đã triển khai (Live CDN) |
+| **Firebase Realtime Database** | 📡 **`https://aboutme-iimax-default-rtdb.asia-southeast1.firebasedatabase.app`** | ✅ Đang đồng bộ thời gian thực |
+| **Nhánh dữ liệu chính** | `/spherex` (Metadata, Stars, Candidates, NEOSSat) | ✅ Rules mở đọc công cộng |
 
 ---
 
-## 2. Cài Đặt Môi Trường (Installation)
+## 2. Tổng Quan Kiến Trúc 2 Phân Hệ
 
-### Cách 1: Sử dụng `uv` (Khuyên dùng — Nhanh nhất & Tự động)
-Nếu máy đã cài `uv`, bạn không cần thiết lập môi trường ảo thủ công:
-```bash
-# Kiểm tra uv đã sẵn sàng
-uv --version
 ```
-Mỗi tệp Python trong `backend/` đã được nhúng siêu dữ liệu phụ thuộc (PEP 723). Khi bạn gọi `uv run`, các thư viện cần thiết sẽ được nạp tức thì trong môi trường cách ly tạm thời.
+┌────────────────────────────────────────────────────────────────────────┐
+│                        PHÂN HỆ 1: BACKEND (PYTHON)                      │
+│                                                                        │
+│   [Tính Năng 1: Tải & Xử lý]               [Tính Năng 2: Đẩy Firebase] │
+│   • SPHEREx 102 băng (3 Epochs)           • Đẩy lên Realtime Database  │
+│   • Sao nền & Vector Gaia DR3      ───►    • Nhánh: /spherex           │
+│   • Vệt quỹ đạo CSA NEOSSat                • Chuẩn hóa JSON Metadata   │
+│   • Thuật toán trừ ảnh Dipole              • Hỗ trợ REST & Admin SDK   │
+└───────────────────────────────────┬────────────────────────────────────┘
+                                    │
+                       HTTP PUT /spherex.json (0.7s)
+                                    │
+                                    ▼
+┌────────────────────────────────────────────────────────────────────────┐
+│                   FIREBASE REALTIME DATABASE (CLOUD)                   │
+│         https://aboutme-iimax-default-rtdb.asia-southeast1...          │
+└───────────────────────────────────┬────────────────────────────────────┘
+                                    │
+                          WebSocket / EventStream
+                                    │
+                                    ▼
+┌────────────────────────────────────────────────────────────────────────┐
+│                  PHÂN HỆ 2: FRONTEND (HTML / CSS / JS)                 │
+│                                                                        │
+│   • Triển khai trên Firebase Hosting: https://aboutme-iimax.web.app    │
+│   • Phong cách Dark Mode Design - Gray tinh giản cho người phổ thông   │
+│   • Lắng nghe realtime từ Firebase DB (db.ref('spherex').on('value')) │
+│   • Không bao giờ bị màn hình trắng (cơ chế Zero-Failure Fallback)     │
+│   • Bộ điều khiển 1-chạm: Phát chuyển động, Tô màu Đỏ/Xanh, Trừ nền   │
+└────────────────────────────────────────────────────────────────────────┘
+```
 
-### Cách 2: Sử dụng `pip` và `venv` truyền thống
+---
+
+## 3. Cài Đặt Môi Trường (Prerequisites & Setup)
+
+### 3.1 Yêu cầu hệ thống
+- **Python**: 3.10 trở lên (khuyên dùng Python 3.11 hoặc 3.14).
+- **Firebase CLI**: `firebase-tools` (kiểm tra bằng `firebase --version`).
+- **Trình duyệt**: Google Chrome, Microsoft Edge, Mozilla Firefox hoặc Safari.
+
+### 3.2 Cài đặt thư viện Python
 ```bash
-# 1. Tạo môi trường ảo Python
-python -m venv .venv
-
-# 2. Kích hoạt môi trường ảo
-# Trên Windows PowerShell:
-.venv\Scripts\Activate.ps1
-# Trên macOS/Linux:
-source .venv/bin/activate
-
-# 3. Cài đặt toàn bộ thư viện cần thiết
 pip install -r requirements.txt
 ```
+*Các gói cốt lõi gồm: `astropy`, `numpy`, `scipy`, `requests`, `firebase-admin`, `pillow`, `fastapi`, `uvicorn`.*
 
 ---
 
-## 3. Kiểm Thử Hệ Thống (Automated Testing)
+## 4. Vận Hành Backend (Python) — 2 Tính Năng Cốt Lõi
 
-Trước khi khởi động hệ thống cho buổi báo cáo hoặc sử dụng thực tế, hãy chạy bộ kiểm thử đơn vị tự động để xác nhận toàn bộ các thuật toán hoạt động chính xác:
+Tệp điều khiển trung tâm là `run_backend.py` (nằm ở thư mục gốc của dự án).
 
+### 4.1 Chạy cả 2 tính năng liên hoàn (Khuyên dùng)
+Tự động tải dữ liệu thiên văn 3 epoch, xử lý trắc quang, phân loại phổ 102 băng và đẩy ngay lên Firebase Realtime Database:
 ```bash
-# Chạy toàn bộ test suite bằng uv
-uv run --with "pytest" --with "astropy" --with "numpy" --with "scipy" --with "pillow" --with "pydantic" pytest backend/tests/test_pipeline.py -v
+python run_backend.py
+# hoặc:
+python run_backend.py --download-and-push
 ```
 
-Hoặc nếu đang kích hoạt môi trường ảo `venv`:
+### 4.2 Chỉ chạy Tính năng 1: Tải dữ liệu về và xử lý
+Tải dữ liệu 3 epoch, sao nền Gaia DR3, vệt NEOSSat và lưu bản sao lưu cục bộ vào `backend/data/spherex_synced_data.json`:
 ```bash
-pytest backend/tests/test_pipeline.py -v
+python run_backend.py --download
 ```
 
-> **Kết quả kỳ vọng**: `4 passed in < 1.5s`  
-> - `test_wavelength_conversions`: Kiểm tra ánh xạ 102 dải phổ ($0.75 - 5.0\,\mu\text{m}$).  
-> - `test_gaia_space_motion_propagation`: Kiểm tra độ chính xác lan truyền vị trí sao Gaia DR3 qua 9 năm.  
-> - `test_background_estimation`: Kiểm tra thuật toán khử nền $2\text{D}$ sigma-clipping.  
-> - `test_difference_imaging`: Kiểm tra độ triệt tiêu nền khi trừ 2 ảnh đồng nhất.
+### 4.3 Chỉ chạy Tính năng 2: Đẩy dữ liệu lên Firebase
+Đọc dữ liệu đã xử lý từ bộ nhớ đệm và đẩy lên Firebase Realtime Database:
+```bash
+python run_backend.py --push
+```
+
+### 4.4 Tùy biến tham số vùng trời hoặc URL Firebase
+```bash
+python run_backend.py --ra 90.0 --dec -66.5606 --firebase-url "https://aboutme-iimax-default-rtdb.asia-southeast1.firebasedatabase.app"
+```
 
 ---
 
-## 4. Vận Hành Backend (REST API Service)
+## 5. Vận Hành Frontend (HTML / JS trên Firebase)
 
-### 4.1 Khởi động Máy Chủ REST API (Uvicorn / FastAPI)
-Để cung cấp dữ liệu cho giao diện Web, khởi động dịch vụ backend:
-```bash
-uv run backend/run_server.py --serve --port 8000
-```
-- **Địa chỉ API chính**: `http://127.0.0.1:8000`
-- **Tài liệu Swagger tương tác (API Docs)**: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
-- **Kiểm tra trạng thái máy chủ (Health Check)**: [http://127.0.0.1:8000/health](http://127.0.0.1:8000/health)
+### 5.1 Trải nghiệm trực tuyến qua Firebase Hosting
+Website đã được triển khai hoàn tất trên CDN toàn cầu của Firebase:
+🌐 **[https://aboutme-iimax.web.app](https://aboutme-iimax.web.app)**
 
-### 4.2 Chạy Kiểm Tra Nhanh Qua Dòng Lệnh (CLI Mode)
-Bạn có thể phân tích bất kỳ tọa độ thiên văn nào trực tiếp trên terminal mà không cần mở trình duyệt:
+### 5.2 Mở trực tiếp trên máy tính cá nhân (Offline / Local)
+Bạn có thể mở tệp bất kỳ lúc nào mà **không gặp lỗi màn hình trắng**:
+- Mở tệp: [`index.html`](file:///c:/Users/Phamv/OneDrive/Desktop/Planet%20X%20and%20SPHEREx/index.html) hoặc [`frontend/index.html`](file:///c:/Users/Phamv/OneDrive/Desktop/Planet%20X%20and%20SPHEREx/frontend/index.html).
+- **Cơ chế hoạt động**:
+  - Khi có mạng: Tự động kết nối tới Firebase Realtime Database và lắng nghe dữ liệu trực tiếp từ Backend.
+  - Khi mất mạng hoặc chưa cấu hình Firebase: Tự động nạp bộ giả lập thiên văn chuẩn SPHEREx/Gaia/NEOSSat để trải nghiệm mượt mà 100%.
+
+### 5.3 Chạy qua máy chủ thử nghiệm cục bộ (Local Server)
 ```bash
-uv run backend/run_server.py --ra 90.0 --dec -66.56 --radius 30.0
+# Chạy máy chủ HTTP nội bộ qua Python
+python -m http.server 8080 --directory frontend
+
+# Truy cập trình duyệt:
+# http://localhost:8080
 ```
-Terminal sẽ in ra toàn bộ kết quả phân tích:
-- Loại thiên thể suy luận (Brown Dwarf, Asteroid, Comet, Star).
-- Độ sâu vạch hấp thụ $CH_4$, đỉnh phát xạ $CO_2$, độ dốc nhiệt.
-- Danh sách sao Gaia DR3 khớp tọa độ và độ dịch chuyển tương đối.
-- Dữ liệu vệt quang học CSA NEOSSat.
 
 ---
 
-## 5. Vận Hành Frontend (Giao Diện Web ChronoSpectra)
+## 6. Triển Khai Lên Firebase (Firebase Deployment)
 
-### 5.1 Khởi chạy giao diện
-- **Phiên bản chuẩn phân lớp (Modular ES)**: Mở trực tiếp file [`frontend/index.html`](frontend/index.html) bằng trình duyệt hoặc qua Live Server.
-- **Phiên bản chạy offline một file duy nhất**: Mở [`frontend/standalone/spherex-chronospectra-singlefile.html`](frontend/standalone/spherex-chronospectra-singlefile.html).
+Dự án đã có sẵn các tệp cấu hình chuẩn:
+- `firebase.json`: Định tuyến Firebase Hosting tới thư mục `frontend` và trỏ quy tắc cơ sở dữ liệu `database.rules.json`.
+- `.firebaserc`: Định danh dự án Firebase mặc định (`aboutme-iimax`).
+- `database.rules.json`: Cấu hình mở quyền đọc cho cộng đồng khoa học công dân và ghi cho backend.
 
-### 5.2 Hướng Dẫn Thao Tác & Phím Tắt
+### Lệnh triển khai nhanh:
+```bash
+# Triển khai toàn bộ (Hosting + Database Rules):
+firebase deploy
 
-| Thao tác | Phím tắt / Hành vi chuột | Mô tả chức năng |
+# Hoặc chỉ cập nhật giao diện web:
+firebase deploy --only hosting
+```
+
+---
+
+## 7. Hướng Dẫn Thao Tác Trực Quan Cho Người Dùng Phổ Thông
+
+| Thao tác | Phím tắt / Hành vi | Kết quả hiển thị |
 |---|---|---|
-| **Bật/Tắt Blinking** | Phím `Space` hoặc nút `[▶ / ❚❚]` | Tự động chuyển đổi chu kỳ giữa Epoch 1 ($2025.0$), Epoch 2 ($2025.5$) và Epoch 3 ($2026.0$). |
-| **Chuyển Epoch thủ công** | Phím mũi tên `←` / `→` | Bước lùi hoặc bước tiến từng ảnh 6 tháng để kiểm tra dịch chuyển tọa độ. |
-| **Điều chỉnh tần số nhấp nháy** | Thanh trượt `BLINK: 1 - 10 Hz` | Tăng giảm tốc độ đổi ảnh từ $1.0\,\text{Hz}$ đến $10.0\,\text{Hz}$. |
-| **Phóng to / Thu nhỏ** | Cuộn chuột (`Scroll Wheel`) | Zoom từ $0.6\times$ đến $6.0\times$ để soi chi tiết từng pixel. |
-| **Di chuyển khung nhìn (Pan)** | Giữ chuột trái và kéo | Di chuyển khắp vùng trời quan sát $45^\prime \times 45^\prime$. |
-| **Căn giữa lại khung hình** | Nút `[Reset FOV]` ở thanh trên | Đưa vùng trời về vị trí trung tâm mặc định. |
-| **Chuyển chế độ hiển thị** | Hàng nút chế độ `[Composite / Dipole / Diff / Invert]` | - `Composite`: Ảnh tự nhiên NIR.<br/>- `Red/Cyan Dipole`: Epoch 1 đỏ, Epoch 2 xanh lơ. Sao đứng yên biến thành trắng, thiên thể di chuyển tách thành cặp đôi.<br/>- `Difference`: Trừ khử nền sao, chỉ hiện phần dư chuyển động.<br/>- `Invert`: Âm bản chụp ảnh thiên văn truyền thống. |
-| **Khử sao quang học Gaia** | Nút `[Mask Known Gaia Stars]` | Làm mờ $88\%$ độ sáng của các sao đã biết trong Gaia DR3, làm lộ diện thiên thể ẩn. |
-| **Quét dải bước sóng 102 Band**| Thanh trượt `BAND: 0 - 102` | Quét dải bước sóng từ $0.75\,\mu\text{m}$ đến $5.0\,\mu\text{m}$ kèm các nút chọn nhanh phân tử. |
-| **Xem chi tiết thiên thể** | Nhấp chuột trái vào thiên thể | Hiển thị thông số đo quang, vẽ phổ 102 band và bảng phân tích phân tử ở chân trang. |
-| **Kiểm tra vệt quang học CSA** | Nút `[Inspect CSA NEOSSat Optical Strip]` | Mở drawer hiển thị 3 frame chụp quang học liên tiếp của kính viễn vọng không gian Canada. |
-| **Bình chọn phân loại** | Các nút trong `Citizen Science Voting` | Ghi nhận ý kiến công dân khoa học (Brown Dwarf, Asteroid, Comet, Known Star). |
-| **Xuất dữ liệu khoa học** | Nút `[Export VO-Table JSON]` | Tải về máy tệp JSON chứa toàn bộ dữ liệu đo quang và trắc tinh để lập báo cáo. |
-
----
-
-## 6. Hướng Dẫn Tích Hợp API (Dành Cho Nhà Phát Triển)
-
-### Gọi API kiểm tra vùng trời qua cURL:
-```bash
-curl -X POST "http://127.0.0.1:8000/api/v1/inspect-sky-sector" \
-     -H "Content-Type: application/json" \
-     -d '{
-       "ra": 90.0,
-       "dec": -66.5606,
-       "radius_arcsec": 30.0,
-       "epoch1_date": "2025-01-01",
-       "epoch2_date": "2025-07-01",
-       "cutout_size_pix": 64
-     }'
-```
-
-### Gọi API kiểm tra qua Python `requests`:
-```python
-import requests
-
-payload = {
-    "ra": 90.0625,
-    "dec": -66.5700,
-    "radius_arcsec": 30.0,
-    "epoch1_date": "2025-01-01",
-    "epoch2_date": "2025-07-01",
-    "cutout_size_pix": 64
-}
-
-response = requests.post("http://127.0.0.1:8000/api/v1/inspect-sky-sector", json=payload)
-data = response.json()
-
-print(f"Lớp thiên thể nhận diện: {data['spectral_profile']['inferred_class']}")
-print(f"Độ sâu vạch CH4: {data['spectral_profile']['ch4_trough_depth']}")
-print(f"Số lượng sao Gaia khớp: {len(data['gaia_dr3_crossmatch'])}")
-```
-
----
-
-## 7. Khắc Phục Sự Cố Thường Gặp (Troubleshooting & FAQs)
-
-### 1. Không kết nối được internet trong buổi thuyết trình hackathon:
-- **Giải pháp**: Hệ thống đã được tích hợp bộ ngắt mạch tự động (**Circuit Breaker**). Khi dịch vụ từ xa (IRSA, Gaia ESAC, CADC) không phản hồi trong $2.5\,\text{giây}$, hệ thống tự động kích hoạt bộ giả lập đa dải băng chuẩn hóa mà không làm treo ứng dụng hay báo lỗi.
-
-### 2. Trình duyệt không tải được module JavaScript:
-- **Hiện tượng**: Lỗi `Access to script at ... from origin 'null' has been blocked by CORS policy` khi nhấp đúp trực tiếp vào `frontend/index.html`.
-- **Giải pháp**:
-  - Khởi chạy một local HTTP server cực nhẹ:
-    ```bash
-    # Chạy từ thư mục gốc dự án:
-    python -m http.server 3000
-    ```
-    Sau đó truy cập: `http://localhost:3000/frontend/`
-  - Hoặc mở bản một file duy nhất: [`frontend/standalone/spherex-chronospectra-singlefile.html`](frontend/standalone/spherex-chronospectra-singlefile.html) (chạy được trên mọi trình duyệt mà không cần web server).
-
-### 3. Cổng 8000 bị xung đột khi chạy Backend:
-- **Giải pháp**: Chỉ định cổng khác bằng tham số `--port`:
-  ```bash
-  uv run backend/run_server.py --serve --port 8080
-  ```
-  Sau đó cập nhật giá trị `API_BASE_URL` trong file `frontend/js/config.js` thành `http://127.0.0.1:8080/api/v1`.
-
+| **Phát / Tạm dừng nhấp nháy** | Nút to **`▶ Phát Chuyển Động`** hoặc phím `Spacebar` | Hình ảnh luân phiên qua lại giữa 3 thời kỳ (2025.0 ⇄ 2025.5 ⇄ 2026.0) để mắt dễ phát hiện chuyển động |
+| **Chọn từng Thời kỳ** | Nút **`Năm 2025.0`**, **`Năm 2025.5`**, **`Năm 2026.0`** | Xem tĩnh từng ảnh chụp cách nhau 6 tháng |
+| **Đổi Chế độ Nhận diện** | • **Ảnh Thường**<br>• **Tô Màu Đỏ/Xanh**<br>• **Chỉ Hiện Vật Thể Bay** | • Xem sao nền vũ trụ tự nhiên<br>• Thời kỳ 1 màu đỏ, thời kỳ 2 màu xanh — vật thể bay tách cặp đỏ-xanh<br>• Xóa sao nền tĩnh, chỉ hiện đốm của vật thể chuyển động |
+| **Thu phóng & Kéo vùng trời** | Cuộn chuột (`Wheel`) & Kéo chuột trái | Phóng to từ 0.6× đến 5.0×; di chuyển camera tự do |
+| **Căn giữa khung ngắm** | Nút **`Căn Giữa`** | Đưa khung nhìn về vị trí trung tâm chuẩn |
+| **Chọn Thiên thể Khám phá** | Nhấp chuột vào thẻ bên phải hoặc nhấp thẳng vào đốm sáng trên bầu trời | Khóa vòng tròn tiêu điểm, hiển thị tên, phân loại, giải thích dễ hiểu và đồ thị phổ hồng ngoại |
+| **Xem Vệt Vệ Tinh NEOSSat** | Nút **`🔍 Xem Vệt Quang Học Vệ Tinh CSA NEOSSat`** | Mở hộp thoại xem 7 khung ảnh quang học liên tiếp xác thực tiểu hành tinh |
+| **Xem Hướng Dẫn Nhanh** | Nút **`Hướng Dẫn`** trên thanh Header | Bật hộp thoại giải thích 3 bước đơn giản cho người mới bắt đầu |

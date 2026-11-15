@@ -1,0 +1,8 @@
+{
+  "rules": {
+    "spherex": {
+      ".read": true,
+      ".write": true
+    }
+  }
+}

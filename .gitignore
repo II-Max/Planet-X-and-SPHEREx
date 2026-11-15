@@ -14,12 +14,32 @@ env/
 venv/
 ENV/
 
+# Firebase Cache & Debug Logs
+.firebase/
+firebase-debug.log*
+firestore-debug.log*
+ui-debug.log*
+
+# Secrets & Local Environment Configs
+.env
+.env.*
+*serviceAccountKey*.json
+credentials.json
+
+# IDE & Editor Specific
+.vscode/
+.idea/
+.agents/
+skills-lock.json
+*.swp
+*.swo
+
 # OS specific
 .DS_Store
 Thumbs.db
 desktop.ini
 
-# Output test data
+# Astronomical Temporary Outputs & FITS cubes
 spherex_output/
 *.fits
-
+backend/data/*.json

@@ -1,6 +1,6 @@
-# SPHEREx ChronoSpectra — Kiến Trúc Hệ Thống & Cấu Trúc Dự Án
+# SPHEREx ChronoSpectra — Kiến Trúc Hệ Thống & Cấu Trúc Dự Án (Firebase Edition)
 
-## 1. Sơ Đồ Kiến Trúc Tổng Thể (System Architecture)
+## 1. Sơ Đồ Kiến Trúc 2 Phân Hệ (System Architecture)
 
 ```mermaid
 flowchart TD
@@ -10,7 +10,7 @@ flowchart TD
         CADC["CSA / CADC NEOSSat<br/>CAOM2 TAP service<br/>(Optical Streak Tracking)"]
     end
 
-    subgraph BACKEND["Backend Xử Lý Thiên Văn (Python / FastAPI)"]
+    subgraph BACKEND["Phân Hệ 1: Backend Python (Xử Lý & Đồng Bộ Firebase)"]
         subgraph INGESTION["Tầng Thu Thập & Chuẩn Hóa (Ingestion Layer)"]
             MOD_IRSA["irsa_service.py<br/>WCS Cutout2D"]
             MOD_GAIA["gaia_service.py<br/>apply_space_motion()"]
@@ -23,25 +23,25 @@ flowchart TD
             MOD_DIFF["difference.py<br/>PSF Matched Diff: ΔI = I₂ - α·I₁"]
             MOD_DIPOLE["dipole_detector.py<br/>Extrema Pairing & SNR"]
             MOD_SPEC["spectral_classifier.py<br/>CH₄, CO₂, Thermal Slopes"]
-            MOD_TILE["tiling.py<br/>Base64 WebP & Red-Cyan Dipole"]
         end
 
-        subgraph API_GATEWAY["Tầng Giao Diện Lập Trình (API Layer)"]
-            SCHEMAS["schemas.py<br/>Pydantic v2 Models"]
-            ROUTE_INSPECT["routes_inspect.py<br/>POST /api/v1/inspect-sky-sector"]
-            ROUTE_CAND["routes_candidates.py<br/>GET /api/v1/candidates & POST /vote"]
-            APP["app.py<br/>FastAPI Router & CORS"]
+        subgraph SYNC_LAYER["Tầng Đồng Bộ Firebase (Sync Layer)"]
+            MOD_FSYNC["firebase_sync.py<br/>1. Download & Process<br/>2. Push to Firebase RTDB"]
+            RUN_CLI["run_backend.py<br/>CLI Launcher (Tải & Đẩy)"]
         end
     end
 
-    subgraph FRONTEND["Frontend Khám Phá Khoa Học Công Dân (ES Modules / WebGL)"]
-        CORE_STATE["AppState.js<br/>State Store & Event Bus"]
-        CORE_RENDER["SkyRenderer.js<br/>HTML5 Canvas (Composite, Dipole, Diff, Invert)"]
-        COMP_TOOLBAR["WiseViewToolbar.js<br/>Blink Steppers, 1-10Hz, Stretch, ZScale"]
-        COMP_SPEC["SpectrumChart.js<br/>102-Band μJy Flux Canvas"]
-        COMP_INSPECT["TargetInspector.js<br/>Gaia Vector Overlay & Masking"]
-        COMP_MODAL["NEOSSatModal.js<br/>Optical Tracking Strip Drawer"]
-        API_CLIENT["ApiClient.js<br/>Fetch Gateway"]
+    subgraph CLOUD["Nền Tảng Đám Mây Firebase (Cloud Infrastructure)"]
+        RTDB["Firebase Realtime Database<br/>/spherex (JSON Tree)<br/>https://aboutme-iimax-default-rtdb..."]
+        HOSTING["Firebase Hosting<br/>Global CDN Web App<br/>https://aboutme-iimax.web.app"]
+    end
+
+    subgraph FRONTEND["Phân Hệ 2: Frontend Khám Phá (Dark Mode Gray - Tinh Giản)"]
+        CORE_RENDER["SkyRenderer<br/>Canvas 2D (Composite, Dipole, Diff)"]
+        CORE_CTRL["1-Touch Blinker<br/>Năm 2025.0 ⇄ 2025.5 ⇄ 2026.0"]
+        SPEC_CHART["Phổ Hồng Ngoại Tinh Giản<br/>Hấp thụ CH₄ & Phát xạ CO₂"]
+        INSPECTOR["Thẻ Khám Phá & Diễn Giải<br/>Dành cho Người Dùng Phổ Thông"]
+        FB_LISTENER["Firebase Sync Listener<br/>db.ref('spherex').on('value')"]
     end
 
     IRSA --> MOD_IRSA
@@ -53,132 +53,95 @@ flowchart TD
     MOD_BG --> MOD_DIFF
     MOD_DIFF --> MOD_DIPOLE
     MOD_IRSA --> MOD_SPEC
-    MOD_DIFF --> MOD_TILE
 
-    MOD_TILE --> ROUTE_INSPECT
-    MOD_SPEC --> ROUTE_INSPECT
-    MOD_GAIA --> ROUTE_INSPECT
-    MOD_CADC --> ROUTE_INSPECT
-    MOD_DIPOLE --> ROUTE_CAND
+    MOD_DIPOLE --> MOD_FSYNC
+    MOD_SPEC --> MOD_FSYNC
+    MOD_GAIA --> MOD_FSYNC
+    MOD_CADC --> MOD_FSYNC
+    RUN_CLI --> MOD_FSYNC
 
-    ROUTE_INSPECT --> APP
-    ROUTE_CAND --> APP
-
-    APP <==>|JSON REST Payload| API_CLIENT
-    API_CLIENT --> CORE_STATE
-    CORE_STATE --> CORE_RENDER
-    CORE_STATE --> COMP_TOOLBAR
-    CORE_STATE --> COMP_SPEC
-    CORE_STATE --> COMP_INSPECT
-    CORE_STATE --> COMP_MODAL
+    MOD_FSYNC ==HTTP PUT==> RTDB
+    HOSTING -.->|Cung cấp tệp tĩnh| FRONTEND
+    RTDB ==WebSocket / EventStream==> FB_LISTENER
+    FB_LISTENER --> CORE_RENDER
+    FB_LISTENER --> INSPECTOR
+    FB_LISTENER --> SPEC_CHART
+    CORE_CTRL --> CORE_RENDER
 ```
 
 ---
 
-## 2. Cấu Trúc Thư Mục Khoa Học & Phân Tách Trách Nhiệm (Separation of Concerns)
+## 2. Cấu Trúc Thư Mục Khoa Học & Phân Tách Trách Nhiệm (Directory Structure)
 
 ```
 c:\Users\Phamv\OneDrive\Desktop\Planet X and SPHEREx\
-├── backend/                             # [BACKEND] Mã nguồn Python xử lý thiên văn & API
-│   ├── __init__.py
-│   ├── config.py                        # Hằng số vật lý, dải bước sóng 102 bands, URLs
-│   ├── app.py                           # Khởi tạo FastAPI, CORS, router aggregation
-│   ├── run_server.py                    # Script chạy server hoặc chạy CLI kiểm tra
-│   │
-│   ├── api/                             # Router và Schema định nghĩa giao thức API
-│   │   ├── __init__.py
-│   │   ├── schemas.py                   # Pydantic models (Request, Response, Gaia, NEOSSat)
-│   │   ├── routes_inspect.py            # POST /api/v1/inspect-sky-sector
-│   │   └── routes_candidates.py         # GET /api/v1/candidates, POST /api/v1/vote
-│   │
-│   ├── ingestion/                       # Kết nối kho dữ liệu đa nhiệm vụ (Multi-Mission)
-│   │   ├── __init__.py
-│   │   ├── irsa_service.py              # Truy vấn NASA IRSA SIAv2 / TAP & cắt ảnh WCS
-│   │   ├── gaia_service.py              # Truy vấn ESA Gaia DR3 & tính lan truyền 3D space-motion
-│   │   ├── cadc_neossat.py              # Truy vấn CSA CADC NEOSSat quang học
-│   │   └── synthetic_generator.py       # Bộ sinh dữ liệu giả lập 102-band SPHEREx cube
-│   │
-│   ├── pipeline/                        # Thuật toán thiên văn & xử lý ảnh
-│   │   ├── __init__.py
-│   │   ├── background.py                # Khử nền 2D sigma-clipped & đo nhiễu sigma
-│   │   ├── difference.py                # Trừ ảnh cân bằng PSF: ΔI = Epoch2 - α·Epoch1
-│   │   ├── dipole_detector.py           # Bắt cặp cực trị dipole (+/-) & tính SNR, vận tốc góc
-│   │   ├── spectral_classifier.py       # Phân tích độ sâu vạch CH₄ (3.3μm), CO₂ (4.26μm), Thermal
-│   │   └── tiling.py                    # Render tile WebP Base64, Red-Cyan Dipole
-│   │
-│   └── tests/                           # Kiểm thử tự động (Unit Tests)
-│       ├── __init__.py
-│       └── test_pipeline.py             # 4 bài test Astrometry, Background, Difference, Wavelength
 │
-├── frontend/                            # [FRONTEND] Web App Khoa Học Công Dân (ES Modules)
-│   ├── index.html                       # HTML5 giao diện chính
-│   │
-│   ├── css/                             # Stylesheets phân lớp
-│   │   ├── variables.css                # Bảng màu dark observatory, tokens, fonts
-│   │   ├── layout.css                   # Grid layout 3 tầng (Header, Viewport, Dock)
-│   │   └── components.css               # Nút bấm, sliders, toolbar, card, modal, toast
-│   │
-│   └── js/                              # JavaScript kiến trúc module
-│       ├── config.js                    # Hằng số bước sóng, tọa độ trung tâm, API URL
-│       │
-│       ├── core/                        # Nhân xử lý đồ họa và trạng thái
-│       │   ├── AppState.js              # Quản lý trạng thái tập trung (Observer Pattern)
-│       │   └── SkyRenderer.js           # Engine render Canvas (Composite, Dipole, Diff, Invert)
-│       │
-│       ├── components/                  # Các khối giao diện người dùng
-│       │   ├── WiseViewToolbar.js       # Blinker 1-10Hz, Epoch stepper, Stretch, ZScale
-│       │   ├── SpectrumChart.js         # Đồ thị phổ 102 dải băng (μJy) với vạch phân tử
-│       │   ├── TargetInspector.js       # Card thông tin thiên thể, Gaia overlay, vote HUD
-│       │   └── NEOSSatModal.js          # Modal vệt chuyển động quang học từ NEOSSat (CADC)
-│       │
-│       ├── services/                    # Dịch vụ dữ liệu
-│       │   ├── ApiClient.js             # Gọi API FastAPI backend
-│       │   └── MockDataService.js       # Dữ liệu mẫu (Y-Dwarf, Asteroid, Comet, Gaia Star)
-│       │
-│       └── main.js                      # Điểm khởi động ứng dụng (Bootstrap)
+├── run_backend.py                       # [ĐIỀU KHIỂN CHÍNH] Chạy Tính năng 1 (Tải về) & Tính năng 2 (Đẩy Firebase)
+├── firebase.json                        # Cấu hình Firebase Hosting & Realtime Database Rules
+├── .firebaserc                          # Cấu hình dự án Firebase mặc định (aboutme-iimax)
+├── database.rules.json                  # Quy tắc bảo mật Realtime Database
+├── requirements.txt                     # Danh mục thư viện Python (astropy, firebase-admin, requests, etc.)
+├── index.html                           # Cổng điều hướng chính cho root workspace
+├── .gitignore                           # Quy tắc loại trừ tệp tạm, cache, logs
 │
-├── docs/                                # Tài liệu kỹ thuật
-│   └── ARCHITECTURE.md                  # Tài liệu kiến trúc toàn diện
+├── backend/                             # PHÂN HỆ 1: BACKEND XỬ LÝ & ĐỒNG BỘ
+│   ├── firebase_sync.py                 # Module 2 tính năng: Tải dữ liệu thiên văn & Đẩy lên Firebase RTDB
+│   ├── app.py                           # Ứng dụng REST API phụ trợ (FastAPI)
+│   ├── run_server.py                    # Khởi chạy server FastAPI hoặc CLI kiểm tra
+│   ├── config.py                        # Tham số vật lý, dải bước sóng, URL dịch vụ
+│   ├── data/                            # Bộ nhớ đệm dữ liệu cục bộ (spherex_synced_data.json)
+│   ├── ingestion/                       # Kết nối kho dữ liệu đa nhiệm vụ (IRSA, Gaia DR3, NEOSSat, Synthetic)
+│   ├── pipeline/                        # Thuật toán thiên văn (background, difference, dipole, classifier, tiling)
+│   └── tests/                           # Bộ kiểm thử tự động (test_pipeline.py)
 │
-├── requirements.txt                     # Danh sách thư viện Python
-├── spherex-chronospectra.html           # Bản standalone 1 file duy nhất (để click chạy ngay)
-└── spherex_transient_detector.py        # Pipeline độc lập kiểm thử thuật toán
+├── frontend/                            # PHÂN HỆ 2: GIAO DIỆN WEB KHOA HỌC CÔNG DÂN (DARK MODE GRAY)
+│   ├── index.html                       # Giao diện chính tinh giản, dễ hiểu cho người dùng phổ thông
+│   ├── css/                             # Stylesheets phân lớp Dark Mode Gray
+│   │   ├── variables.css                # Bảng màu xám than chì sang trọng, tokens
+│   │   ├── layout.css                   # Grid layout 2 cột thoáng đãng (Canvas bên trái, Thẻ thông tin bên phải)
+│   │   └── components.css               # Nút bấm 1-chạm, thẻ vật thể, hộp giải thích, biểu đồ phổ
+│   └── js/
+│       ├── app.js                       # Logic ứng dụng tinh giản: SkyRenderer, Spectrum, Blinker, Firebase Sync
+│       ├── config.js                    # Hằng số thiên văn
+│       ├── core/                        # Core classes phục vụ module mở rộng
+│       ├── components/                  # UI components phục vụ phân lớp sâu
+│       └── services/                    # ApiClient, MockDataService
+│
+├── docs/                                # Tài liệu kỹ thuật chuyên sâu
+│   ├── ARCHITECTURE.md                  # Bản vẽ kiến trúc hệ thống toàn diện
+│   └── GAIA_SPACE_MOTION_PROPAGATION.md # Đặc tả giải thuật lan truyền chuyển động sao Gaia DR3
+│
+└── OPERATIONS_MANUAL.md                 # Sổ tay vận hành, cài đặt và phím tắt chi tiết
 ```
 
 ---
 
-## 3. Bảng Phân Tách Nhiệm Vụ Từng File (Responsibility Matrix)
+## 3. Bảng Phân Tách Nhiệm Vụ Từng Module (Responsibility Matrix)
 
-| File | Trách nhiệm chính (Single Responsibility) | Thay đổi khi nào? |
+| Module / Tệp tin | Trách nhiệm chính (Single Responsibility) | Giao thức / Công nghệ |
 |---|---|---|
-| `backend/config.py` | Hằng số vật lý, dải bước sóng, độ phân giải SPHEREx ($6.2^{\prime\prime}$/px) | Khi đổi thông số kính thiên văn hoặc URL archive |
-| `backend/api/schemas.py` | Khuôn mẫu dữ liệu Pydantic (Request/Response) | Khi thêm trường dữ liệu trao đổi giữa FE và BE |
-| `backend/ingestion/gaia_service.py` | Lan truyền không gian 3D sao Gaia (`apply_space_motion`) | Khi nâng cấp thuật toán nội suy quỹ đạo sao |
-| `backend/ingestion/cadc_neossat.py` | Kết nối dữ liệu giám sát tiểu hành tinh Canada NEOSSat | Khi thay đổi câu truy vấn TAP CAOM2 của CADC |
-| `backend/pipeline/difference.py` | Cân bằng PSF và trừ ảnh giữa 2 epoch | Khi áp dụng giải thuật trừ ảnh nâng cao (ZOGY) |
-| `backend/pipeline/spectral_classifier.py` | Đo độ sâu vạch hấp thụ metan 3.3μm, CO₂ 4.26μm | Khi bổ sung vạch quang phổ mới cần phát hiện |
-| `frontend/js/core/SkyRenderer.js` | Vẽ bầu trời sao, chế độ Red/Cyan Dipole, Invert, Pan/Zoom | Khi muốn tinh chỉnh đồ họa, shader hoặc màu sắc sao |
-| `frontend/js/components/WiseViewToolbar.js` | Bộ điều khiển nhấp nháy WiseView (1-10Hz), chuyển epoch | Khi thêm phím tắt hoặc tính năng điều khiển mới |
-| `frontend/js/components/SpectrumChart.js` | Vẽ biểu đồ phổ 102 dải băng trên canvas | Khi đổi trục tọa độ, đơn vị đo hoặc vạch đánh dấu |
+| `run_backend.py` | Điểm điều khiển trung tâm: Tải dữ liệu thiên văn và đẩy lên Firebase | Python CLI |
+| `backend/firebase_sync.py` | Thực thi Tính năng 1 (Xử lý trắc quang đa epoch) & Tính năng 2 (HTTP PUT lên Firebase) | Requests / Firebase Admin / Astropy |
+| `backend/ingestion/gaia_service.py` | Lan truyền không gian 3D sao Gaia (`apply_space_motion`) qua 9 năm | Astropy Coordinates & Time |
+| `backend/ingestion/cadc_neossat.py` | Truy vấn vệt quỹ đạo vệ tinh Canada NEOSSat | CAOM2 TAP / CADC |
+| `backend/pipeline/difference.py` | Cân bằng mức nền PSF và trừ 2 epoch: $\Delta I = I_2 - \alpha \cdot I_1$ | NumPy / SciPy Filters |
+| `backend/pipeline/dipole_detector.py` | Bắt cặp cực đại/cực tiểu dipole, tính vector chuyển động và SNR | SciPy ndimage |
+| `backend/pipeline/spectral_classifier.py` | Phân loại phổ 102 băng qua hố hấp thụ $CH_4$, đỉnh $CO_2$, bức xạ nhiệt | NumPy SED analysis |
+| `frontend/index.html` | Cấu trúc giao diện HTML5 tinh giản phong cách Dark Mode Design - Gray | HTML5 Semantic |
+| `frontend/js/app.js` | Quản lý vẽ canvas, nhấp nháy chuyển động 1-chạm, lắng nghe Firebase thời gian thực | Canvas 2D API / Firebase JS SDK |
+| `database.rules.json` | Quy tắc bảo mật Realtime Database: Mở đọc công cộng, cho phép backend ghi | Firebase Security Rules |
+| `firebase.json` | Cấu hình Hosting định tuyến tới `frontend` và trỏ database rules | Firebase CLI Config |
 
 ---
 
-## 4. Hướng Dẫn Kiểm Thử & Chạy Dự Án
+## 4. Địa Chỉ Trực Tuyến & Kiểm Thử
 
-### Chạy Unit Test Backend:
-```bash
-uv run --with "pytest" --with "astropy" --with "numpy" --with "scipy" --with "pillow" --with "pydantic" pytest backend/tests/test_pipeline.py
-```
-*(Kết quả: 4 bài test tự động vượt qua 100% trong < 1 giây)*
-
-### Chạy Server Backend (REST API):
-```bash
-uv run backend/run_server.py --serve --port 8000
-```
-- API Docs: `http://127.0.0.1:8000/docs`
-- Health check: `http://127.0.0.1:8000/health`
-
-### Chạy Giao Diện Frontend:
-- Mở trực tiếp file: [`frontend/index.html`](file:///c:/Users/Phamv/OneDrive/Desktop/Planet%20X%20and%20SPHEREx/frontend/index.html)
-- Hoặc chạy qua bất kỳ local server nào (Live Server, Python http.server, Nginx).
-
+- 🌐 **Website trải nghiệm trực tiếp (Firebase Hosting)**:  
+  **[https://aboutme-iimax.web.app](https://aboutme-iimax.web.app)**
+- 📡 **Firebase Realtime Database Endpoint**:  
+  **`https://aboutme-iimax-default-rtdb.asia-southeast1.firebasedatabase.app`**
+- 🧪 **Kiểm thử tự động**:
+  ```bash
+  pytest backend/tests/test_pipeline.py -v
+  ```
+  *(4/4 bài test vượt qua trong < 1.0 giây)*
